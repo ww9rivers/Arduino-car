@@ -6,34 +6,64 @@
 // o  Line tracking.
 
 #include <IRremote.h>
-#include <Servo.h>  //servo library
+#include <Servo.h>  // servo library
 Servo myservo;      // create servo object to control servo
 
 int Echo = A4;  
 int Trig = A5; 
 
 ////////// IR REMOTE CODES //////////
-#define F 16736925  // FORWARD
-#define B 16754775  // BACK
-#define L 16720605  // LEFT
-#define R 16761405  // RIGHT
-#define S 16712445  // STOP
+#define F   16736925          // FORWARD
+#define B   16754775          // BACK
+#define L   16720605          // LEFT
+#define R   16761405          // RIGHT
+#define S   16712445          // STOP
 #define UNKNOWN_F 5316027     // FORWARD
 #define UNKNOWN_B 2747854299  // BACK
 #define UNKNOWN_L 1386468383  // LEFT
 #define UNKNOWN_R 553536955   // RIGHT
 #define UNKNOWN_S 3622325019  // STOP
 
-#define RECV_PIN  12
+/**     
+ *      Full IR keypad code table (See README:Reference):
+ */
+#define IR_UP     0xFF629D;   // Up Arrow
+#define IR_LEFT   0xFF22DD;   // Left Arrow
+#define IR_OK     0xFF02FD;
+#define IR_RIGHT  0xFFC23D;   // Right Arrow
+#define IR_DOWN   0xFFA857;   // Down Arrow
+#define IR_1      0xFF6897;
+#define IR_2      0xFF9867;
+#define IR_3      0xFFB04F;
+#define IR_4      0xFF30CF;
+#define IR_5      0xFF18E7;
+#define IR_6      0xFF7A85;
+#define IR_7      0xFF10EF;
+#define IR_8      0xFF38C7;
+#define IR_9      0xFF5AA5;
+#define IR_0      0xFF4AB5;
+#define IR_STAR   0xFF42BD;   // *
+#define IR_POUND  0xFF52AD;   // #
 
-/*define channel enable output pins*/
-#define ENA 5   // Left  wheel speed
-#define ENB 6   // Right wheel speed
-/*define logic control output pins*/
-#define IN1 7   // Left  wheel forward
-#define IN2 8   // Left  wheel reverse
-#define IN3 9   // Right wheel reverse
-#define IN4 11  // Right wheel forward
+/**
+ *    Name the GPIO pins used in the car
+ */
+//  Channel enable output pins
+#define ENA 5         // Left  wheel speed
+#define ENB 6         // Right wheel speed
+//  Logic control output pins
+#define IN1 7         // Left  wheel forward
+#define IN2 8         // Left  wheel reverse
+#define IN3 9         // Right wheel reverse
+#define IN4 11        // Right wheel forward
+//  IR input and LED pins
+#define RECV_PIN  12  // Infrared signal receiving pin
+#define LED       13  // LED pin
+//  Line tracking input pins
+#define IN_LT_L   2
+#define IN_LT_M   4
+#define IN_LT_R   10
+
 #define carSpeed 150  // initial speed of car >=0 to <=255
 
 
@@ -49,8 +79,8 @@ int Trig = A5;
 
 
 
-IRrecv irrecv(RECV_PIN);    //initialization
-decode_results results;     //Define structure type
+IRrecv irrecv(RECV_PIN);    // initialization
+decode_results results;     // Define structure type
 
 unsigned long val;
 unsigned long preMillis;
@@ -109,32 +139,154 @@ void stop(){
    Serial.println("Stop!");
 } 
 
-void setup() {
-  Serial.begin(9600);
-  pinMode(IN1,OUTPUT);
+/**
+ *  Before execute loop() function,
+ *  setup() function will execute first and only execute once. 
+ */
+void auto_run_setup() {
+  pinMode(IN1,OUTPUT);// before useing io pin, pin mode must be set first 
   pinMode(IN2,OUTPUT);
   pinMode(IN3,OUTPUT);
   pinMode(IN4,OUTPUT);
   pinMode(ENA,OUTPUT);
   pinMode(ENB,OUTPUT);
+}
+
+/**
+ * Object avoidance mode setup
+ */
+void avoidance_setup() { 
+  myservo.attach(3);  // attach servo on pin 3 to servo object
+  pinMode(Echo, INPUT);    
+  pinMode(Trig, OUTPUT);  
+} 
+
+/**
+ *  IR Blink mode setup.
+ */
+void ir_blink_setup() {
+  pinMode(LED, OUTPUT); // initialize LED as an output
+  irrecv.enableIRIn();  // Start receiving
+}
+
+/**
+ *  Line Tracking IO define
+ */
+#define LT_R !digitalRead(10)
+#define LT_M !digitalRead(4)
+#define LT_L !digitalRead(2)
+
+void tracking_setup(){
+  pinMode(LT_R,INPUT);
+  pinMode(LT_M,INPUT);
+  pinMode(LT_L,INPUT);
+}
+
+void setup() {
+  Serial.begin(9600);   // debug output at 9600 baud
+  auto_run_setup();
+  avoidance_setup();
+  ir_blink_setup();
+  tracking_setup();
   stop();
   irrecv.enableIRIn();  
 }
 
-//  Operation modes:
-#define NONE_MODE       0
-#define AUTO_MODE       1
-#define IR_MODE         2
-#define AVOIDANCE_MODE  3
-#define TRACKING_MODE   4
+// Auto Run
 
-/** Main loop
- *
- * The program combines several modes together, using the IR remote control to switch and control the car.
- * 
- * When running in a specific mode, the "0" key is always used to 
- */
-void loop() {
+// Repeat execution
+void auto_run_loop() {
+  forward();  //go forward
+  delay(1000);//delay 1000 ms
+  back();     //go back
+  delay(1000);
+  left();     //turning left
+  delay(1000);
+  right();    //turning right
+  delay(1000);
+}
+
+// Object avoidance
+
+// Ultrasonic distance measurement Sub function
+int Distance_test() {
+  digitalWrite(Trig, LOW);   
+  delayMicroseconds(2);
+  digitalWrite(Trig, HIGH);  
+  delayMicroseconds(20);
+  digitalWrite(Trig, LOW);   
+  float Fdistance = pulseIn(Echo, HIGH);  
+  Fdistance= Fdistance / 58;       
+  return (int)Fdistance;
+}
+
+int rightDistance = 0, leftDistance = 0, middleDistance = 0;
+
+void avoidance_loop() { 
+  myservo.write(90);  // set servo position according to scaled value
+  delay(500);
+  middleDistance = Distance_test();
+
+  if(middleDistance <= 20) {
+    stop();
+    delay(500);
+    myservo.write(10);
+    delay(1000);
+    rightDistance = Distance_test();
+
+    delay(500);
+    myservo.write(90);
+    delay(1000);
+    myservo.write(180);
+    delay(1000);
+    leftDistance = Distance_test();
+
+    delay(500);
+    myservo.write(90);
+    delay(1000);
+    if(rightDistance > leftDistance) {
+      right();
+      delay(360);
+    }
+    else if(rightDistance < leftDistance) {
+      left();
+      delay(360);
+    }
+    else if((rightDistance <= 20) || (leftDistance <= 20)) {
+      back();
+      delay(180);
+    }
+    else {
+      forward();
+    }
+  }
+  else {
+    forward();
+  }
+}
+
+//  Infrared Blink
+bool state = LOW;           //define default input mode
+
+void stateChange() {
+  state = !state;          
+  digitalWrite(LED, state);
+}
+
+void ir_blink_loop() {
+  if (irrecv.decode(&results)) { 
+    val = results.value;
+    Serial.println(val);
+    irrecv.resume();      // Receive the next value
+    delay(150);
+    if(val == L || val == UNKNOWN_L) {  
+      stateChange();
+    }
+  }
+}
+
+//  Infared Control
+void ir_control_loop() {
   // Check for mode change:
   if (irrecv.decode(&results)){ 
     preMillis = millis();
@@ -163,54 +315,7 @@ void loop() {
   }
 }
 
-// infrared_Blink
-#define RECV_PIN  12        //Infrared signal receiving pin
-#define LED       13        //define LED pin
-#define L         16738455
-#define UNKNOWN_L 1386468383
-
-bool state = LOW;           //define default input mode
-
-
-void stateChange() {
-  state = !state;          
-  digitalWrite(LED, state);
-}
-
-void ir_blink_setup() {
-  pinMode(LED, OUTPUT); //initialize LED as an output
-  Serial.begin(9600);  // debug output at 9600 baud
-  irrecv.enableIRIn();  // Start receiving
-}
-
-void ir_blink_loop() {
-  if (irrecv.decode(&results)) { 
-    val = results.value;
-    Serial.println(val);
-    irrecv.resume();      // Receive the next value
-    delay(150);
-    if(val == L || val == UNKNOWN_L) {  
-      stateChange();
-    }
-  }
-}
-
 // Line tracking
-
-//Line Tracking IO define
-#define LT_R !digitalRead(10)
-#define LT_M !digitalRead(4)
-#define LT_L !digitalRead(2)
-
-
-
-
-void tracking_setup(){
-  Serial.begin(9600);
-  pinMode(LT_R,INPUT);
-  pinMode(LT_M,INPUT);
-  pinMode(LT_L,INPUT);
-}
 
 void tracking_loop() {
   if(LT_M){
@@ -219,111 +324,43 @@ void tracking_loop() {
   else if(LT_R) { 
     right();
     while(LT_R);                             
-  }   
+  }
   else if(LT_L) {
     left();
     while(LT_L);  
   }
 }
 
-// Object avoidance
+/** Main loop
+ *
+ * The program combines several modes together, using the IR remote control to switch and control the car.
+ * 
+ * When running in a specific mode, the "0" key is always used to 
+ */
+//  Operation modes:
+#define STOP_MODE       0
+#define AUTO_MODE       1
+#define IR_MODE         2
+#define AVOIDANCE_MODE  3
+#define TRACKING_MODE   4
+int op_mode = AUTO_MODE;
 
-int rightDistance = 0, leftDistance = 0, middleDistance = 0;
-
-
-
-//Ultrasonic distance measurement Sub function
-int Distance_test() {
-  digitalWrite(Trig, LOW);   
-  delayMicroseconds(2);
-  digitalWrite(Trig, HIGH);  
-  delayMicroseconds(20);
-  digitalWrite(Trig, LOW);   
-  float Fdistance = pulseIn(Echo, HIGH);  
-  Fdistance= Fdistance / 58;       
-  return (int)Fdistance;
-}  
-
-void avoidance_setup() { 
-  myservo.attach(3);  // attach servo on pin 3 to servo object
-  Serial.begin(9600);     
-  pinMode(Echo, INPUT);    
-  pinMode(Trig, OUTPUT);  
-  pinMode(IN1, OUTPUT);
-  pinMode(IN2, OUTPUT);
-  pinMode(IN3, OUTPUT);
-  pinMode(IN4, OUTPUT);
-  pinMode(ENA, OUTPUT);
-  pinMode(ENB, OUTPUT);
-  stop();
-} 
-
-void avoidance_loop() { 
-    myservo.write(90);  //setservo position according to scaled value
-    delay(500); 
-    middleDistance = Distance_test();
-
-    if(middleDistance <= 20) {     
+void loop() {
+  switch (op_mode) {
+    case STOP_MODE:
       stop();
-      delay(500);                         
-      myservo.write(10);          
-      delay(1000);      
-      rightDistance = Distance_test();
-      
-      delay(500);
-      myservo.write(90);              
-      delay(1000);                                                  
-      myservo.write(180);              
-      delay(1000); 
-      leftDistance = Distance_test();
-      
-      delay(500);
-      myservo.write(90);              
-      delay(1000);
-      if(rightDistance > leftDistance) {
-        right();
-        delay(360);
-      }
-      else if(rightDistance < leftDistance) {
-        left();
-        delay(360);
-      }
-      else if((rightDistance <= 20) || (leftDistance <= 20)) {
-        back();
-        delay(180);
-      }
-      else {
-        forward();
-      }
-    }  
-    else {
-        forward();
-    }                     
-}
-
-// Auto Run
-
-
-//before execute loop() function, 
-//setup() function will execute first and only execute once
-void auto_run_setup() {
-  Serial.begin(9600);//open serial and set the baudrate
-  pinMode(IN1,OUTPUT);//before useing io pin, pin mode must be set first 
-  pinMode(IN2,OUTPUT);
-  pinMode(IN3,OUTPUT);
-  pinMode(IN4,OUTPUT);
-  pinMode(ENA,OUTPUT);
-  pinMode(ENB,OUTPUT);
-}
-
-//Repeat execution
-void auto_run_loop() {
-  forward();  //go forward
-  delay(1000);//delay 1000 ms
-  back();     //go back
-  delay(1000);
-  left();     //turning left
-  delay(1000);
-  right();    //turning right
-  delay(1000);
+      break;
+    case AUTO_MODE:
+      auto_run_loop();
+      break;
+    case IR_MODE:
+      ir_control_loop();
+      break;
+    case AVOIDANCE_MODE:
+      avoidance_loop();
+      break;
+    case TRACKING_MODE:
+      tracking_loop();
+      break;
+  }
 }
