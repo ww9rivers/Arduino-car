@@ -13,11 +13,6 @@ int Echo = A4;
 int Trig = A5; 
 
 ////////// IR REMOTE CODES //////////
-#define F   16736925          // FORWARD
-#define B   16754775          // BACK
-#define L   16720605          // LEFT
-#define R   16761405          // RIGHT
-#define S   16712445          // STOP
 #define UNKNOWN_F 5316027     // FORWARD
 #define UNKNOWN_B 2747854299  // BACK
 #define UNKNOWN_L 1386468383  // LEFT
@@ -100,10 +95,10 @@ void back(){
 }
 
 void forward(){
-  // analogWrite(ENA, carSpeed);
-  // analogWrite(ENB, carSpeed);
-  digitalWrite(ENA,HIGH); //enable L298n A channel
-  digitalWrite(ENB,HIGH); //enable L298n B channel
+  analogWrite(ENA, carSpeed);
+  analogWrite(ENB, carSpeed);
+  //digitalWrite(ENA,HIGH); //enable L298n A channel
+  //digitalWrite(ENB,HIGH); //enable L298n B channel
   digitalWrite(IN1,HIGH); //set IN1 hight level
   digitalWrite(IN2,LOW);  //set IN2 low level
   digitalWrite(IN3,LOW);  //set IN3 low level
@@ -112,10 +107,10 @@ void forward(){
 }
 
 void left(){
-  // analogWrite(ENA, carSpeed);
-  // analogWrite(ENB, carSpeed);
-  digitalWrite(ENA,HIGH);
-  digitalWrite(ENB,HIGH);
+  analogWrite(ENA, carSpeed);
+  analogWrite(ENB, carSpeed);
+  //digitalWrite(ENA,HIGH);
+  //digitalWrite(ENB,HIGH);
   digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
@@ -273,20 +268,8 @@ void stateChange() {
   digitalWrite(LED, state);
 }
 
-void ir_blink_loop() {
-  if (irrecv.decode(&results)) { 
-    val = results.value;
-    Serial.println(val);
-    irrecv.resume();      // Receive the next value
-    delay(150);
-    if(val == L || val == UNKNOWN_L) {  
-      stateChange();
-    }
-  }
-}
-
 //  Infared Control
-void ir_control_loop() {
+int ir_control_loop() {
   // Check for mode change:
   if (irrecv.decode(&results)){ 
     preMillis = millis();
@@ -304,7 +287,11 @@ void ir_control_loop() {
       case UNKNOWN_R: right();break;
       case IR_OK:
       case UNKNOWN_S: stop(); break;
-      default: break;
+      case IR_STAR:
+        stateChange();
+        break;
+      default:
+        return val;
     }
   }
   else{
@@ -313,6 +300,7 @@ void ir_control_loop() {
       preMillis = millis();
     }
   }
+  return 0;
 }
 
 // Line tracking
@@ -343,9 +331,16 @@ void tracking_loop() {
 #define IR_MODE         2
 #define AVOIDANCE_MODE  3
 #define TRACKING_MODE   4
-int op_mode = AUTO_MODE;
+int op_mode = IR_MODE;
 
 void loop() {
+  switch (ir_control_loop()) {
+    case IR_0:  stop(); return;
+    case IR_1:  op_mode = AUTO_MODE; break;
+    case IR_2:  op_mode = IR_MODE; return;
+    case IR_3:  op_mode = AVOIDANCE_MODE; break;
+    case IR_4:  op_mode = TRACKING_MODE; break;    
+  }
   switch (op_mode) {
     case STOP_MODE:
       stop();
@@ -354,7 +349,6 @@ void loop() {
       auto_run_loop();
       break;
     case IR_MODE:
-      ir_control_loop();
       break;
     case AVOIDANCE_MODE:
       avoidance_loop();
