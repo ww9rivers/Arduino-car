@@ -9,7 +9,7 @@
 #include <Servo.h>  // servo library
 Servo myservo;      // create servo object to control servo
 
-int Echo = A4;  
+int Echo = A4;
 int Trig = A5; 
 
 ////////// IR REMOTE CODES //////////
@@ -27,23 +27,23 @@ int Trig = A5;
 /**     
  *      Full IR keypad code table (See README:Reference):
  */
-#define IR_UP     0xFF629D;   // Up Arrow
-#define IR_LEFT   0xFF22DD;   // Left Arrow
-#define IR_OK     0xFF02FD;
-#define IR_RIGHT  0xFFC23D;   // Right Arrow
-#define IR_DOWN   0xFFA857;   // Down Arrow
-#define IR_1      0xFF6897;
-#define IR_2      0xFF9867;
-#define IR_3      0xFFB04F;
-#define IR_4      0xFF30CF;
-#define IR_5      0xFF18E7;
-#define IR_6      0xFF7A85;
-#define IR_7      0xFF10EF;
-#define IR_8      0xFF38C7;
-#define IR_9      0xFF5AA5;
-#define IR_0      0xFF4AB5;
-#define IR_STAR   0xFF42BD;   // *
-#define IR_POUND  0xFF52AD;   // #
+#define IR_UP     0xFF629D    // Up Arrow
+#define IR_LEFT   0xFF22DD    // Left Arrow
+#define IR_OK     0xFF02FD
+#define IR_RIGHT  0xFFC23D    // Right Arrow
+#define IR_DOWN   0xFFA857    // Down Arrow
+#define IR_1      0xFF6897
+#define IR_2      0xFF9867
+#define IR_3      0xFFB04F
+#define IR_4      0xFF30CF
+#define IR_5      0xFF18E7
+#define IR_6      0xFF7A85
+#define IR_7      0xFF10EF
+#define IR_8      0xFF38C7
+#define IR_9      0xFF5AA5
+#define IR_0      0xFF4AB5
+#define IR_STAR   0xFF42BD    // *
+#define IR_POUND  0xFF52AD    // #
 
 /**
  *    Name the GPIO pins used in the car
@@ -294,15 +294,15 @@ void ir_control_loop() {
     Serial.println(val);
     irrecv.resume();
     switch(val){
-      case F: 
+      case IR_UP:
       case UNKNOWN_F: forward(); break;
-      case B: 
+      case IR_DOWN:
       case UNKNOWN_B: back(); break;
-      case L: 
+      case IR_LEFT:
       case UNKNOWN_L: left(); break;
-      case R: 
+      case IR_RIGHT:
       case UNKNOWN_R: right();break;
-      case S: 
+      case IR_OK:
       case UNKNOWN_S: stop(); break;
       default: break;
     }
@@ -321,7 +321,7 @@ void tracking_loop() {
   if(LT_M){
     forward();
   }
-  else if(LT_R) { 
+  else if(LT_R) {
     right();
     while(LT_R);                             
   }
