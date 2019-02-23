@@ -330,8 +330,8 @@ void tracking_loop() {
 /** Main loop
  *
  * The program combines several modes together, using the IR remote control to switch and control the car.
- * 
- * When running in a specific mode, the "0" key is always used to 
+ *
+ * When running in a specific mode, the "0" key is always used to stop the car.
  */
 void loop() {
   switch (ir_control_loop()) {
