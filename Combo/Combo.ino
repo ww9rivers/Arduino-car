@@ -13,11 +13,11 @@ int Echo = A4;
 int Trig = A5; 
 
 ////////// IR REMOTE CODES //////////
-#define UNKNOWN_F 5316027     // FORWARD
-#define UNKNOWN_B 2747854299  // BACK
-#define UNKNOWN_L 1386468383  // LEFT
-#define UNKNOWN_R 553536955   // RIGHT
-#define UNKNOWN_S 3622325019  // STOP
+#define UNKNOWN_F 0x00511dbb  // FORWARD  5316027
+#define UNKNOWN_B 0xa3c8eddb  // BACK     2747854299
+#define UNKNOWN_L 0x52a3d41f  // LEFT     1386468383
+#define UNKNOWN_R 0x20fe4dbb  // RIGHT    553536955
+#define UNKNOWN_S 0xd7e84b1b  // STOP     3622325019
 
 /**     
  *      Full IR keypad code table (See README:Reference):
@@ -59,7 +59,7 @@ int Trig = A5;
 #define IN_LT_M   4
 #define IN_LT_R   10
 
-#define carSpeed 150  // initial speed of car >=0 to <=255
+#define carSpeed 200  // initial speed of car >=0 to <=255
 
 
 //    The direction of the car's movement
@@ -97,13 +97,13 @@ void back(){
 void forward(){
   analogWrite(ENA, carSpeed);
   analogWrite(ENB, carSpeed);
-  //digitalWrite(ENA,HIGH); //enable L298n A channel
-  //digitalWrite(ENB,HIGH); //enable L298n B channel
-  digitalWrite(IN1,HIGH); //set IN1 hight level
-  digitalWrite(IN2,LOW);  //set IN2 low level
-  digitalWrite(IN3,LOW);  //set IN3 low level
-  digitalWrite(IN4,HIGH); //set IN4 hight level
-  Serial.println("go forward!");  //send message to serial monitor
+  //digitalWrite(ENA,HIGH);       // enable L298n A channel
+  //digitalWrite(ENB,HIGH);       // enable L298n B channel
+  digitalWrite(IN1,HIGH);         // set IN1 hight level
+  digitalWrite(IN2,LOW);          // set IN2 low level
+  digitalWrite(IN3,LOW);          // set IN3 low level
+  digitalWrite(IN4,HIGH);         // set IN4 hight level
+  Serial.println("go forward!");  // send message to serial monitor
 }
 
 void left(){
@@ -268,6 +268,14 @@ void stateChange() {
   digitalWrite(LED, state);
 }
 
+//  Operation modes:
+#define STOP_MODE       0
+#define AUTO_MODE       1
+#define IR_MODE         2
+#define AVOIDANCE_MODE  3
+#define TRACKING_MODE   4
+int op_mode = IR_MODE;
+
 //  Infared Control
 int ir_control_loop() {
   // Check for mode change:
@@ -294,7 +302,7 @@ int ir_control_loop() {
         return val;
     }
   }
-  else{
+  else if (op_mode == IR_MODE) {
     if(millis() - preMillis > 500){
       stop();
       preMillis = millis();
@@ -325,14 +333,6 @@ void tracking_loop() {
  * 
  * When running in a specific mode, the "0" key is always used to 
  */
-//  Operation modes:
-#define STOP_MODE       0
-#define AUTO_MODE       1
-#define IR_MODE         2
-#define AVOIDANCE_MODE  3
-#define TRACKING_MODE   4
-int op_mode = IR_MODE;
-
 void loop() {
   switch (ir_control_loop()) {
     case IR_0:  stop(); return;
