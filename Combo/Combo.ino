@@ -266,6 +266,8 @@ bool state = LOW;           //define default input mode
 void stateChange() {
   state = !state;          
   digitalWrite(LED, state);
+  Serial.print("LED state changed to ");
+  Serial.println(state);
 }
 
 //  Operation modes:
@@ -335,7 +337,7 @@ void tracking_loop() {
  */
 void loop() {
   switch (ir_control_loop()) {
-    case IR_0:  stop(); return;
+    case IR_0:  op_mode = STOP_MODE; break;
     case IR_1:  op_mode = AUTO_MODE; break;
     case IR_2:  op_mode = IR_MODE; return;
     case IR_3:  op_mode = AVOIDANCE_MODE; break;
