@@ -188,17 +188,33 @@ void setup() {
 }
 
 // Auto Run
+#define AUTORUN_FORE  0
+#define AUTORUN_BACK  1
+#define AUTORUN_LEFT  2
+#define AUTORUN_RIGHT 3
+int autorun_mode = AUTORUN_FORE;  // Current auto run mode
+int autorun_time = 0;             // Time in the current mode
 
 // Repeat execution
 void auto_run_loop() {
-  forward();  //go forward
-  delay(1000);//delay 1000 ms
-  back();     //go back
-  delay(1000);
-  left();     //turning left
-  delay(1000);
-  right();    //turning right
-  delay(1000);
+  int now = millis();
+  if (now > autorun_time) {
+    autorun_time = now+999;
+    switch (autorun_mode) {
+    case AUTORUN_FORE:
+      forward();          // go forward
+      break;
+    case AUTORUN_BACK:
+      back();             // go back
+      break;
+    case AUTORUN_LEFT:
+      left();             // turning left
+      break;
+    case AUTORUN_RIGHT:
+      right();            // turning right
+    }
+    if (++autorun_mode > AUTORUN_RIGHT) { autorun_mode = AUTORUN_FORE; }
+  }
 }
 
 // Object avoidance
@@ -286,6 +302,7 @@ int ir_control_loop() {
     val = results.value;
     Serial.println(val);
     irrecv.resume();
+    stateChange();
     switch(val){
       case IR_UP:
       case UNKNOWN_F: forward(); break;
@@ -298,7 +315,6 @@ int ir_control_loop() {
       case IR_OK:
       case UNKNOWN_S: stop(); break;
       case IR_STAR:
-        stateChange();
         break;
       default:
         return val;
