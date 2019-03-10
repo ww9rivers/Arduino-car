@@ -6,11 +6,19 @@
 // o  Line tracking.
 
 #include <IRremote.h>
+
+// create servo object to control servo
 #include <Servo.h>  // servo library
-Servo myservo;      // create servo object to control servo
+Servo myservo;
 
 int Echo = A4;
 int Trig = A5; 
+
+//  Logic control output pins
+#define IN1 7         // Left  wheel forward
+#define IN2 8         // Left  wheel reverse
+#define IN3 9         // Right wheel reverse
+#define IN4 11        // Right wheel forward
 
 ////////// IR REMOTE CODES //////////
 #define UNKNOWN_F 0x00511dbb  // FORWARD  5316027
@@ -43,14 +51,16 @@ int Trig = A5;
 /**
  *    Name the GPIO pins used in the car
  */
-//  Channel enable output pins
-#define ENA 5         // Left  wheel speed
-#define ENB 6         // Right wheel speed
+
 //  Logic control output pins
 #define IN1 7         // Left  wheel forward
 #define IN2 8         // Left  wheel reverse
 #define IN3 9         // Right wheel reverse
 #define IN4 11        // Right wheel forward
+
+//  Channel enable output pins
+#define ENA 5         // Left  wheel speed
+#define ENB 6         // Right wheel speed
 //  IR input and LED pins
 #define RECV_PIN  12  // Infrared signal receiving pin
 #define LED       13  // LED pin
@@ -61,7 +71,6 @@ int Trig = A5;
 
 #define carSpeed 200  // initial speed of car >=0 to <=255
 
-
 //    The direction of the car's movement
 //  ENA   ENB   IN1   IN2   IN3   IN4   Description  
 //  HIGH  HIGH  HIGH  LOW   LOW   HIGH  Car is runing forward
@@ -71,8 +80,16 @@ int Trig = A5;
 //  HIGH  HIGH  LOW   LOW   LOW   LOW   Car is stoped
 //  HIGH  HIGH  HIGH  HIGH  HIGH  HIGH  Car is stoped
 //  LOW   LOW   N/A   N/A   N/A   N/A   Car is stoped
-
-
+void left_back ()  { digitalWrite(IN1, LOW);  digitalWrite(IN2, HIGH); }
+void left_fore ()  { digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW); }
+void left_stop ()  { digitalWrite(IN1, LOW);  digitalWrite(IN2, LOW); }
+void right_back () { digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW); }
+void right_fore () { digitalWrite(IN3, LOW);  digitalWrite(IN4, HIGH); }
+void right_stop () { digitalWrite(IN3, LOW);  digitalWrite(IN4, LOW); }
+void set_car_speed ()  { analogWrite(ENA, carSpeed); analogWrite(ENB, carSpeed); }
+// enable L298n A+B channels
+void start_car () { digitalWrite(ENA, HIGH); digitalWrite(ENB,HIGH); }
+void stop_car () {  digitalWrite(ENA, LOW);  digitalWrite(ENB, LOW);  Serial.println("Stop!"); } 
 
 IRrecv irrecv(RECV_PIN);    // initialization
 decode_results results;     // Define structure type
@@ -84,55 +101,33 @@ unsigned long preMillis;
  * BEGIN DEFINE FUNCTIONS
  */
 
-void back(){
-  analogWrite(ENA, carSpeed);
-  analogWrite(ENB, carSpeed);
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, LOW);
+void back() {
+  left_back();
+  right_back();
+  start_car();
   Serial.println("go back!");
 }
 
-void forward(){
-  analogWrite(ENA, carSpeed);
-  analogWrite(ENB, carSpeed);
-  //digitalWrite(ENA,HIGH);       // enable L298n A channel
-  //digitalWrite(ENB,HIGH);       // enable L298n B channel
-  digitalWrite(IN1,HIGH);         // set IN1 hight level
-  digitalWrite(IN2,LOW);          // set IN2 low level
-  digitalWrite(IN3,LOW);          // set IN3 low level
-  digitalWrite(IN4,HIGH);         // set IN4 hight level
-  Serial.println("go forward!");  // send message to serial monitor
+void forward() {
+  left_fore();
+  right_fore();
+  start_car();
+  Serial.println("go forward!");
 }
 
-void left(){
-  analogWrite(ENA, carSpeed);
-  analogWrite(ENB, carSpeed);
-  //digitalWrite(ENA,HIGH);
-  //digitalWrite(ENB,HIGH);
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);
-  digitalWrite(IN3, LOW);
-  digitalWrite(IN4, HIGH);
+void left() {
+  left_back();
+  right_fore();
+  start_car();
   Serial.println("go left!");
 }
 
-void right(){
-  analogWrite(ENA, carSpeed);
-  analogWrite(ENB, carSpeed);
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, LOW);
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, LOW); 
+void right() {
+  left_fore();
+  right_back();
+  start_car();
   Serial.println("go right!");
 }
-
-void stop(){
-   digitalWrite(ENA, LOW);
-   digitalWrite(ENB, LOW);
-   Serial.println("Stop!");
-} 
 
 /**
  *  Before execute loop() function,
@@ -178,12 +173,13 @@ void tracking_setup(){
 }
 
 void setup() {
+  stop_car();
   Serial.begin(9600);   // debug output at 9600 baud
   auto_run_setup();
   avoidance_setup();
   ir_blink_setup();
   tracking_setup();
-  stop();
+  set_car_speed();
   irrecv.enableIRIn();  
 }
 
@@ -239,7 +235,7 @@ void avoidance_loop() {
   middleDistance = Distance_test();
 
   if(middleDistance <= 20) {
-    stop();
+    stop_car();
     delay(500);
     myservo.write(10);
     delay(1000);
@@ -302,27 +298,33 @@ int ir_control_loop() {
     val = results.value;
     Serial.println(val);
     irrecv.resume();
-    stateChange();
     switch(val){
-      case IR_UP:
-      case UNKNOWN_F: forward(); break;
-      case IR_DOWN:
-      case UNKNOWN_B: back(); break;
-      case IR_LEFT:
-      case UNKNOWN_L: left(); break;
-      case IR_RIGHT:
-      case UNKNOWN_R: right();break;
-      case IR_OK:
-      case UNKNOWN_S: stop(); break;
+      case IR_UP:     forward(); break;
+      case IR_DOWN:   back(); break;
+      case IR_LEFT:   left(); break;
+      case IR_RIGHT:  right();break;
+      case IR_OK:     stop_car(); break;
       case IR_STAR:
+      case IR_0:      op_mode = STOP_MODE; break;
+      case IR_1:      op_mode = AUTO_MODE; break;
+      case IR_2:      op_mode = IR_MODE; return val;
+      case IR_3:      op_mode = AVOIDANCE_MODE; break;
+      case IR_4:      op_mode = TRACKING_MODE; break;    
+      case IR_5:
+      case IR_6:
+      case IR_7:
+      case IR_8:
+      case IR_9:
+      case IR_POUND:
         break;
       default:
         return val;
     }
+    stateChange();
   }
   else if (op_mode == IR_MODE) {
     if(millis() - preMillis > 500){
-      stop();
+      stop_car();
       preMillis = millis();
     }
   }
@@ -352,16 +354,10 @@ void tracking_loop() {
  * When running in a specific mode, the "0" key is always used to stop the car.
  */
 void loop() {
-  switch (ir_control_loop()) {
-    case IR_0:  op_mode = STOP_MODE; break;
-    case IR_1:  op_mode = AUTO_MODE; break;
-    case IR_2:  op_mode = IR_MODE; return;
-    case IR_3:  op_mode = AVOIDANCE_MODE; break;
-    case IR_4:  op_mode = TRACKING_MODE; break;    
-  }
+  ir_control_loop();
   switch (op_mode) {
     case STOP_MODE:
-      stop();
+      stop_car();
       break;
     case AUTO_MODE:
       auto_run_loop();
