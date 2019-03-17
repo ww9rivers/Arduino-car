@@ -30,6 +30,7 @@ int Trig = A5;
 /**     
  *      Full IR keypad code table (See README:Reference):
  */
+#define IR_NONE   0           // Use zero to indicate no IR code received
 #define IR_UP     0xFF629D    // Up Arrow
 #define IR_LEFT   0xFF22DD    // Left Arrow
 #define IR_OK     0xFF02FD
@@ -272,6 +273,9 @@ void avoidance_loop() {
   }
 }
 
+/** IR Control
+ *
+ */
 //  Infrared Blink
 bool state = LOW;           //define default input mode
 
@@ -283,52 +287,45 @@ void stateChange() {
 }
 
 //  Operation modes:
-#define STOP_MODE       0
-#define AUTO_MODE       1
-#define IR_MODE         2
-#define AVOIDANCE_MODE  3
-#define TRACKING_MODE   4
+enum {
+  STOP_MODE,
+  AUTO_MODE,
+  IR_MODE,
+  AVOIDANCE_MODE,
+  TRACKING_MODE,
+  TESTING_MODE
+};
 int op_mode = IR_MODE;
 
-//  Infared Control
-int ir_control_loop() {
-  // Check for mode change:
-  if (irrecv.decode(&results)){ 
-    preMillis = millis();
-    val = results.value;
-    Serial.println(val);
-    irrecv.resume();
-    switch(val){
-      case IR_UP:     forward(); break;
-      case IR_DOWN:   back(); break;
-      case IR_LEFT:   left(); break;
-      case IR_RIGHT:  right();break;
-      case IR_OK:     stop_car(); break;
-      case IR_STAR:
-      case IR_0:      op_mode = STOP_MODE; break;
-      case IR_1:      op_mode = AUTO_MODE; break;
-      case IR_2:      op_mode = IR_MODE; return val;
-      case IR_3:      op_mode = AVOIDANCE_MODE; break;
-      case IR_4:      op_mode = TRACKING_MODE; break;    
-      case IR_5:
-      case IR_6:
-      case IR_7:
-      case IR_8:
-      case IR_9:
-      case IR_POUND:
-        break;
-      default:
-        return val;
-    }
-    stateChange();
+//  Infared Control reception
+int ir_control_code() {
+  if (!irrecv.decode(&results)) {
+    return IR_NONE;
   }
-  else if (op_mode == IR_MODE) {
-    if(millis() - preMillis > 500){
-      stop_car();
-      preMillis = millis();
-    }
+
+  preMillis = millis();
+  val = results.value;
+  Serial.println(val);
+  irrecv.resume();
+  return val;
+}
+
+/** Perform IR control mode actions.
+ * 
+ */
+void ir_control_loop(int val) {
+  switch(val){
+    case IR_UP:     forward(); break;
+    case IR_DOWN:   back(); break;
+    case IR_LEFT:   left(); break;
+    case IR_RIGHT:  right();break;
+    case IR_OK:     stop_car(); break;
+    default:
+      if (millis() - preMillis > 500) {
+        stop_car();
+        preMillis = millis();
+      }
   }
-  return 0;
 }
 
 // Line tracking
@@ -347,6 +344,51 @@ void tracking_loop() {
   }
 }
 
+// Individual function testing
+enum {
+  TEST_LEFT, TEST_RIGHT
+} test_mode = TEST_LEFT;
+
+void testing_loop (int ircode) {
+  switch(test_mode) {
+    case TEST_LEFT:
+      switch (ircode) {
+        case IR_UP:     left_fore(); right_stop(); break;
+        case IR_DOWN:   left_back(); right_stop(); break;
+        case IR_RIGHT:  left_stop(); test_mode = TEST_RIGHT; return;
+      }
+      break;
+    case TEST_RIGHT:
+      switch (ircode) {
+        case IR_UP:     left_stop(); right_fore(); break;
+        case IR_DOWN:   left_stop(); right_back(); break;
+        case IR_LEFT:   right_stop(); test_mode = TEST_LEFT; return;
+      }
+      break;
+  }
+   start_car();
+}
+
+/** Check for mode change
+ *
+ * @param   ircode  Code received from the IR control.
+ * @Returns: TRUE if op_mode is changed; FALSE if unchanged.
+ */
+bool op_mode_change (int ircode) {
+  int previous_mode = op_mode;
+  switch (ircode) {
+    case IR_0:    op_mode = STOP_MODE; break;
+    case IR_1:    op_mode = AUTO_MODE; break;
+    case IR_2:    op_mode = IR_MODE; break;
+    case IR_3:    op_mode = AVOIDANCE_MODE; break;
+    case IR_4:    op_mode = TRACKING_MODE; break;    
+    case IR_5:    op_mode = TESTING_MODE; break;
+  }
+  if (op_mode == previous_mode) { return false; }
+  stateChange();
+  return true;
+}
+
 /** Main loop
  *
  * The program combines several modes together, using the IR remote control to switch and control the car.
@@ -354,21 +396,18 @@ void tracking_loop() {
  * When running in a specific mode, the "0" key is always used to stop the car.
  */
 void loop() {
-  ir_control_loop();
+  int ircode = ir_control_code();
+  if (op_mode_change(ircode)) {
+    stop_car();
+    // ...may perform op_mode specific initialization here...
+    return;
+  }
   switch (op_mode) {
-    case STOP_MODE:
-      stop_car();
-      break;
-    case AUTO_MODE:
-      auto_run_loop();
-      break;
-    case IR_MODE:
-      break;
-    case AVOIDANCE_MODE:
-      avoidance_loop();
-      break;
-    case TRACKING_MODE:
-      tracking_loop();
-      break;
+    case STOP_MODE:       stop_car(); break;
+    case AUTO_MODE:       auto_run_loop(); break;
+    case IR_MODE:         ir_control_loop(ircode); break;
+    case AVOIDANCE_MODE:  avoidance_loop(); break;
+    case TRACKING_MODE:   tracking_loop(); break;
+    case TESTING_MODE:    testing_loop(ircode); break;
   }
 }
