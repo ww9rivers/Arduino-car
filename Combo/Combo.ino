@@ -99,6 +99,12 @@ unsigned long val;
 unsigned long preMillis;
 
 /**
+ *  Timer -- Macros for timer operation
+ */
+#define timer_init(x)       { x = millis(); }
+#define timer_exceeds(x, y) (millis()-x > y)
+
+/**
  * BEGIN DEFINE FUNCTIONS
  */
 
@@ -150,7 +156,7 @@ void avoidance_setup() {
   myservo.attach(3);  // attach servo on pin 3 to servo object
   pinMode(Echo, INPUT);    
   pinMode(Trig, OUTPUT);  
-} 
+}
 
 /**
  *  IR Blink mode setup.
@@ -214,7 +220,9 @@ void auto_run_loop() {
   }
 }
 
-// Object avoidance
+/** 
+ *  Object avoidance 
+ */
 
 // Ultrasonic distance measurement Sub function
 int Distance_test() {
@@ -294,8 +302,7 @@ enum {
   AVOIDANCE_MODE,
   TRACKING_MODE,
   TESTING_MODE
-};
-int op_mode = IR_MODE;
+} op_mode = IR_MODE;
 
 //  Infared Control reception
 int ir_control_code() {
@@ -303,7 +310,7 @@ int ir_control_code() {
     return IR_NONE;
   }
 
-  preMillis = millis();
+  timer_init(preMillis);
   val = results.value;
   Serial.println(val);
   irrecv.resume();
@@ -321,9 +328,9 @@ void ir_control_loop(int val) {
     case IR_RIGHT:  right();break;
     case IR_OK:     stop_car(); break;
     default:
-      if (millis() - preMillis > 500) {
+      if (timer_exceeds(preMillis, 500)) {
         stop_car();
-        preMillis = millis();
+        timer_init(preMillis);
       }
   }
 }
