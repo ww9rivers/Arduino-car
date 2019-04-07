@@ -7,12 +7,7 @@
 
 #include <IRremote.h>
 
-// create servo object to control servo
-#include <Servo.h>  // servo library
-Servo myservo;
-
-int Echo = A4;
-int Trig = A5; 
+#include "avoidance.h"
 
 //  Logic control output pins
 #define IN1 7         // Left  wheel forward
@@ -108,28 +103,28 @@ unsigned long preMillis;
  * BEGIN DEFINE FUNCTIONS
  */
 
-void back() {
+void go_reverse() {
   left_back();
   right_back();
   start_car();
   Serial.println("go back!");
 }
 
-void forward() {
+void go_forward() {
   left_fore();
   right_fore();
   start_car();
   Serial.println("go forward!");
 }
 
-void left() {
+void turn_left() {
   left_back();
   right_fore();
   start_car();
   Serial.println("go left!");
 }
 
-void right() {
+void turn_right() {
   left_fore();
   right_back();
   start_car();
@@ -147,15 +142,6 @@ void auto_run_setup() {
   pinMode(IN4,OUTPUT);
   pinMode(ENA,OUTPUT);
   pinMode(ENB,OUTPUT);
-}
-
-/**
- * Object avoidance mode setup
- */
-void avoidance_setup() { 
-  myservo.attach(3);  // attach servo on pin 3 to servo object
-  pinMode(Echo, INPUT);    
-  pinMode(Trig, OUTPUT);  
 }
 
 /**
@@ -205,81 +191,21 @@ void auto_run_loop() {
     autorun_time = now+999;
     switch (autorun_mode) {
     case AUTORUN_FORE:
-      forward();          // go forward
+      go_forward();          // go forward
       break;
     case AUTORUN_BACK:
-      back();             // go back
+      go_reverse();       // go back
       break;
     case AUTORUN_LEFT:
-      left();             // turning left
+      turn_left();             // turning left
       break;
     case AUTORUN_RIGHT:
-      right();            // turning right
+      turn_right();            // turning right
     }
     if (++autorun_mode > AUTORUN_RIGHT) { autorun_mode = AUTORUN_FORE; }
   }
 }
 
-/** 
- *  Object avoidance 
- */
-
-// Ultrasonic distance measurement Sub function
-int Distance_test() {
-  digitalWrite(Trig, LOW);   
-  delayMicroseconds(2);
-  digitalWrite(Trig, HIGH);  
-  delayMicroseconds(20);
-  digitalWrite(Trig, LOW);   
-  float Fdistance = pulseIn(Echo, HIGH);  
-  Fdistance= Fdistance / 58;       
-  return (int)Fdistance;
-}
-
-int rightDistance = 0, leftDistance = 0, middleDistance = 0;
-
-void avoidance_loop() { 
-  myservo.write(90);  // set servo position according to scaled value
-  delay(500);
-  middleDistance = Distance_test();
-
-  if(middleDistance <= 20) {
-    stop_car();
-    delay(500);
-    myservo.write(10);
-    delay(1000);
-    rightDistance = Distance_test();
-
-    delay(500);
-    myservo.write(90);
-    delay(1000);
-    myservo.write(180);
-    delay(1000);
-    leftDistance = Distance_test();
-
-    delay(500);
-    myservo.write(90);
-    delay(1000);
-    if(rightDistance > leftDistance) {
-      right();
-      delay(360);
-    }
-    else if(rightDistance < leftDistance) {
-      left();
-      delay(360);
-    }
-    else if((rightDistance <= 20) || (leftDistance <= 20)) {
-      back();
-      delay(180);
-    }
-    else {
-      forward();
-    }
-  }
-  else {
-    forward();
-  }
-}
 
 /** IR Control
  *
@@ -322,10 +248,10 @@ int ir_control_code() {
  */
 void ir_control_loop(int val) {
   switch(val){
-    case IR_UP:     forward(); break;
-    case IR_DOWN:   back(); break;
-    case IR_LEFT:   left(); break;
-    case IR_RIGHT:  right();break;
+    case IR_UP:     go_forward(); break;
+    case IR_DOWN:   go_reverse(); break;
+    case IR_LEFT:   turn_left(); break;
+    case IR_RIGHT:  turn_right();break;
     case IR_OK:     stop_car(); break;
     default:
       if (timer_exceeds(preMillis, 500)) {
@@ -339,14 +265,14 @@ void ir_control_loop(int val) {
 
 void tracking_loop() {
   if(LT_M){
-    forward();
+    go_forward();
   }
   else if(LT_R) {
-    right();
+    turn_right();
     while(LT_R);                             
   }
   else if(LT_L) {
-    left();
+    turn_left();
     while(LT_L);  
   }
 }
