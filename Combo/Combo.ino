@@ -8,6 +8,7 @@
 #include <IRremote.h>
 
 #include "avoidance.h"
+#include "utils.h"
 
 //  Logic control output pins
 #define IN1 7         // Left  wheel forward
@@ -92,12 +93,6 @@ decode_results results;     // Define structure type
 
 unsigned long val;
 unsigned long preMillis;
-
-/**
- *  Timer -- Macros for timer operation
- */
-#define timer_init(x)       { x = millis(); }
-#define timer_exceeds(x, y) (millis()-x > y)
 
 /**
  * BEGIN DEFINE FUNCTIONS

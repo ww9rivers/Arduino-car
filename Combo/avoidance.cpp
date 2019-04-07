@@ -1,7 +1,18 @@
-#include "Arduino.h"
+/**
+ *  Object avoidance module
+ *  
+ *  The logic (algorithm) of object avoidance:
+ *  
+ *  1. The car moves forward (as the ultrasound sensor is mouted at the front);
+ *  2. While moving, the ultrasound sensor (USS) is triggerd to emit a sound;
+ *  3. If an echo is received by the USS, then it is assumed that an object is
+ *     detected at the direction of the sensor;
+ *  4. The car is moved in the opposite direction of the sensor.
+ */
+#include <Arduino.h>    // Must be included in submodule
 #include "avoidance.h"
 #include "utils.h"
-#include <Servo.h>  // servo library
+#include <Servo.h>      // servo library
 
 // create servo object to control servo
 Servo myservo;
@@ -16,67 +27,66 @@ const int Trig = A5;
  */
 void avoidance_setup() { 
   myservo.attach(3);  // attach servo on pin 3 to servo object
+  myservo.write(90);
   pinMode(Echo, INPUT);    
   pinMode(Trig, OUTPUT);  
 }
 
 /** 
- *  Object avoidance 
+ *  Ultrasonic distance measurement Sub function 
+ *
+ *  Algorithm for ultrasound distance measurement:
+ *    Distance = (Time x Speed of sound in air (340 m/s))/2
  */
-
-// Ultrasonic distance measurement Sub function
 int Distance_test() {
   digitalWrite(Trig, LOW);   
   delayMicroseconds(2);
-  digitalWrite(Trig, HIGH);  
-  delayMicroseconds(20);
+  digitalWrite(Trig, HIGH);
+  delayMicroseconds(10);
   digitalWrite(Trig, LOW);   
-  float Fdistance = pulseIn(Echo, HIGH);  
-  Fdistance= Fdistance / 58;       
-  return (int)Fdistance;
+  return (int)(pulseIn(Echo, HIGH)*(340/20000));
 }
 
-int rightDistance = 0, leftDistance = 0, middleDistance = 0;
+const int angle[] = { 1, 90, 180 };
+int odistance[3] = { 999, 999, 999 };
+#define leftDistance    odistance[0]
+#define middleDistance  odistance[1]
+#define rightDistance   odistance[2]
+#define MEASURE_LEFT    0
+#define MEASURE_FRONT   1
+#define MEASURE_RIGHT   2
+int measuring_mode = MEASURE_FRONT;
+enum {
+  MEASURING,
+  TURNING
+} main_mode = MEASURING;
+int turning_direction = 1;      // FORWARD: 1, REVERSE: -1
+unsigned long turn_timer;
 
-void avoidance_loop() { 
-  myservo.write(90);  // set servo position according to scaled value
-  delay(500);
-  middleDistance = Distance_test();
-
-  if(middleDistance <= 20) {
-    stop_car();
-    delay(500);
-    myservo.write(10);
-    delay(1000);
-    rightDistance = Distance_test();
-
-    delay(500);
-    myservo.write(90);
-    delay(1000);
-    myservo.write(180);
-    delay(1000);
-    leftDistance = Distance_test();
-
-    delay(500);
-    myservo.write(90);
-    delay(1000);
-    if(rightDistance > leftDistance) {
-      turn_right();
-      delay(360);
+void avoidance_loop() {
+  // Detect object(s) and mearure distances:
+  if (main_mode == MEASURING) {
+    odistance[measuring_mode] = Distance_test();
+    main_mode = TURNING;
+    timer_init(turn_timer);
+    measuring_mode += turning_direction;
+    if (measuring_mode > MEASURE_RIGHT || measuring_mode < MEASURE_LEFT) {
+      turning_direction = -turning_direction;
+      measuring_mode = MEASURE_FRONT;
     }
-    else if(rightDistance < leftDistance) {
-      turn_left();
-      delay(360);
-    }
-    else if((rightDistance <= 20) || (leftDistance <= 20)) {
-      go_reverse();
-      delay(180);
-    }
-    else {
-      go_forward();
-    }
+    myservo.write(angle[measuring_mode]);
+  } else if (timer_exceeds(turn_timer, 500)) {
+    main_mode = MEASURING;
   }
-  else {
+
+  // Avoide object(s) if anything is detected:
+  if (middleDistance <= 20 && (rightDistance <= 20 || leftDistance <= 20)) {
+    go_reverse();
+  } else if (rightDistance > leftDistance) {
+    turn_right();
+  } else if (rightDistance < leftDistance) {
+    turn_left();
+  } else {
     go_forward();
   }
 }
