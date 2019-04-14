@@ -9,6 +9,7 @@
 
 #include "Combo.h"
 #include "avoidance.h"
+#include "testing.h"
 
 //  Logic control output pins
 #define IN1 7         // Left  wheel forward
@@ -22,30 +23,6 @@
 #define UNKNOWN_L 0x52a3d41f  // LEFT     1386468383
 #define UNKNOWN_R 0x20fe4dbb  // RIGHT    553536955
 #define UNKNOWN_S 0xd7e84b1b  // STOP     3622325019
-
-/**     
- *      Full IR keypad code table (See README:Reference):
- */
-typedef enum {
-  IR_NONE   = 0,          // Use zero to indicate no IR code received
-  IR_UP     = 0xFF629D,   // Up Arrow
-  IR_LEFT   = 0xFF22DD,   // Left Arrow
-  IR_OK     = 0xFF02FD,
-  IR_RIGHT  = 0xFFC23D,   // Right Arrow
-  IR_DOWN   = 0xFFA857,   // Down Arrow
-  IR_1      = 0xFF6897,
-  IR_2      = 0xFF9867,
-  IR_3      = 0xFFB04F,
-  IR_4      = 0xFF30CF,
-  IR_5      = 0xFF18E7,
-  IR_6      = 0xFF7A85,
-  IR_7      = 0xFF10EF,
-  IR_8      = 0xFF38C7,
-  IR_9      = 0xFF5AA5,
-  IR_0      = 0xFF4AB5,
-  IR_STAR   = 0xFF42BD,   // *
-  IR_POUND  = 0xFF52AD    // #
-} IR_Code;
 
 /**
  *    Name the GPIO pins used in the car
@@ -263,31 +240,6 @@ void tracking_loop() {
     turn_left();
     while(LT_L);
   }
-}
-
-// Individual function testing
-enum {
-  TEST_LEFT, TEST_RIGHT
-} test_mode = TEST_LEFT;
-
-void testing_loop (IR_Code ircode) {
-  switch(test_mode) {
-    case TEST_LEFT:
-      switch (ircode) {
-        case IR_UP:     left_fore(); right_stop(); break;
-        case IR_DOWN:   left_back(); right_stop(); break;
-        case IR_RIGHT:  left_stop(); test_mode = TEST_RIGHT; return;
-      }
-      break;
-    case TEST_RIGHT:
-      switch (ircode) {
-        case IR_UP:     left_stop(); right_fore(); break;
-        case IR_DOWN:   left_stop(); right_back(); break;
-        case IR_LEFT:   right_stop(); test_mode = TEST_LEFT; return;
-      }
-      break;
-  }
-   start_car();
 }
 
 /** Check for mode change

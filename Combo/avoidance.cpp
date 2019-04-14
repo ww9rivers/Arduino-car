@@ -19,10 +19,11 @@ Servo myservo;
 
 #include "avoidance.h"
 
+#define OOR   999
 const int Echo = A4;
 const int Trig = A5;
 const int angle[] = { 1, 90, 180 };
-int odistance[3] = { 999, 999, 999 };
+int odistance[3] = { OOR, OOR, OOR };
 #define leftDistance    odistance[0]
 #define middleDistance  odistance[1]
 #define rightDistance   odistance[2]
@@ -49,9 +50,9 @@ Op_Mode avoidance_setup() {
     main_mode = MEASURING;
     measuring_mode = MEASURE_FRONT;
     turning_direction = 1;
-    odistance[0] = odistance[1] = odistance[2] = 999;
+    odistance[0] = odistance[1] = odistance[2] = OOR;
   }
-  return AVOIDANCE_MODE;  
+  return AVOIDANCE_MODE;
 }
 
 /** 
@@ -67,9 +68,10 @@ int Distance_test() {
   digitalWrite(Trig, LOW);   
   delayMicroseconds(2);
   digitalWrite(Trig, HIGH);
-  delayMicroseconds(10);
+  delayMicroseconds(20);
   digitalWrite(Trig, LOW);   
-  return (int)(pulseIn(Echo, HIGH)*(340/20000));
+  unsigned long mtime = pulseIn(Echo, HIGH, 180);
+  return (mtime > 0) ? (mtime*(340/20000)) : OOR;
 }
 
 void avoidance_loop() {
@@ -84,7 +86,7 @@ void avoidance_loop() {
       measuring_mode = MEASURE_FRONT;
     }
     myservo.write(angle[measuring_mode]);
-  } else if (timer_exceeds(turn_timer, 600)) {
+  } else if (timer_exceeds(turn_timer, 1000)) {
     main_mode = MEASURING;
   }
 
