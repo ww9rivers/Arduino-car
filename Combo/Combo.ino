@@ -7,8 +7,8 @@
 
 #include <IRremote.h>
 
+#include "Combo.h"
 #include "avoidance.h"
-#include "utils.h"
 
 //  Logic control output pins
 #define IN1 7         // Left  wheel forward
@@ -26,24 +26,26 @@
 /**     
  *      Full IR keypad code table (See README:Reference):
  */
-#define IR_NONE   0           // Use zero to indicate no IR code received
-#define IR_UP     0xFF629D    // Up Arrow
-#define IR_LEFT   0xFF22DD    // Left Arrow
-#define IR_OK     0xFF02FD
-#define IR_RIGHT  0xFFC23D    // Right Arrow
-#define IR_DOWN   0xFFA857    // Down Arrow
-#define IR_1      0xFF6897
-#define IR_2      0xFF9867
-#define IR_3      0xFFB04F
-#define IR_4      0xFF30CF
-#define IR_5      0xFF18E7
-#define IR_6      0xFF7A85
-#define IR_7      0xFF10EF
-#define IR_8      0xFF38C7
-#define IR_9      0xFF5AA5
-#define IR_0      0xFF4AB5
-#define IR_STAR   0xFF42BD    // *
-#define IR_POUND  0xFF52AD    // #
+typedef enum {
+  IR_NONE   = 0,          // Use zero to indicate no IR code received
+  IR_UP     = 0xFF629D,   // Up Arrow
+  IR_LEFT   = 0xFF22DD,   // Left Arrow
+  IR_OK     = 0xFF02FD,
+  IR_RIGHT  = 0xFFC23D,   // Right Arrow
+  IR_DOWN   = 0xFFA857,   // Down Arrow
+  IR_1      = 0xFF6897,
+  IR_2      = 0xFF9867,
+  IR_3      = 0xFFB04F,
+  IR_4      = 0xFF30CF,
+  IR_5      = 0xFF18E7,
+  IR_6      = 0xFF7A85,
+  IR_7      = 0xFF10EF,
+  IR_8      = 0xFF38C7,
+  IR_9      = 0xFF5AA5,
+  IR_0      = 0xFF4AB5,
+  IR_STAR   = 0xFF42BD,   // *
+  IR_POUND  = 0xFF52AD    // #
+} IR_Code;
 
 /**
  *    Name the GPIO pins used in the car
@@ -205,6 +207,7 @@ void auto_run_loop() {
 /** IR Control
  *
  */
+Op_Mode op_mode = IR_MODE;
 //  Infrared Blink
 bool state = LOW;           //define default input mode
 
@@ -215,24 +218,14 @@ void stateChange() {
   Serial.println(state);
 }
 
-//  Operation modes:
-enum {
-  STOP_MODE,
-  AUTO_MODE,
-  IR_MODE,
-  AVOIDANCE_MODE,
-  TRACKING_MODE,
-  TESTING_MODE
-} op_mode = IR_MODE;
-
 //  Infared Control reception
-int ir_control_code() {
+IR_Code ir_control_code() {
   if (!irrecv.decode(&results)) {
     return IR_NONE;
   }
 
   timer_init(preMillis);
-  val = results.value;
+  IR_Code val = (IR_Code)results.value;
   Serial.println(val);
   irrecv.resume();
   return val;
@@ -241,7 +234,7 @@ int ir_control_code() {
 /** Perform IR control mode actions.
  * 
  */
-void ir_control_loop(int val) {
+void ir_control_loop(IR_Code val) {
   switch(val){
     case IR_UP:     go_forward(); break;
     case IR_DOWN:   go_reverse(); break;
@@ -264,11 +257,11 @@ void tracking_loop() {
   }
   else if(LT_R) {
     turn_right();
-    while(LT_R);                             
+    while(LT_R);
   }
   else if(LT_L) {
     turn_left();
-    while(LT_L);  
+    while(LT_L);
   }
 }
 
@@ -277,7 +270,7 @@ enum {
   TEST_LEFT, TEST_RIGHT
 } test_mode = TEST_LEFT;
 
-void testing_loop (int ircode) {
+void testing_loop (IR_Code ircode) {
   switch(test_mode) {
     case TEST_LEFT:
       switch (ircode) {
@@ -302,13 +295,13 @@ void testing_loop (int ircode) {
  * @param   ircode  Code received from the IR control.
  * @Returns: TRUE if op_mode is changed; FALSE if unchanged.
  */
-bool op_mode_change (int ircode) {
+bool op_mode_change (IR_Code ircode) {
   int previous_mode = op_mode;
   switch (ircode) {
     case IR_0:    op_mode = STOP_MODE; break;
     case IR_1:    op_mode = AUTO_MODE; break;
     case IR_2:    op_mode = IR_MODE; break;
-    case IR_3:    op_mode = AVOIDANCE_MODE; break;
+    case IR_3:    op_mode = avoidance_setup(); break;
     case IR_4:    op_mode = TRACKING_MODE; break;    
     case IR_5:    op_mode = TESTING_MODE; break;
   }
@@ -324,7 +317,7 @@ bool op_mode_change (int ircode) {
  * When running in a specific mode, the "0" key is always used to stop the car.
  */
 void loop() {
-  int ircode = ir_control_code();
+  IR_Code ircode = ir_control_code();
   if (op_mode_change(ircode)) {
     stop_car();
     // ...may perform op_mode specific initialization here...
