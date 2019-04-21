@@ -37,7 +37,8 @@ typedef enum {
   IR_MODE,
   AVOIDANCE_MODE,
   TRACKING_MODE,
-  TESTING_MODE
+  TESTING_MODE,
+  DISTTEST_MODE
 } Op_Mode;
 extern Op_Mode op_mode;
 
@@ -47,6 +48,7 @@ extern Op_Mode op_mode;
 #define timer_init(x)       { x = millis(); }
 #define timer_exceeds(x, y) (millis()-x > y)
 
+void set_LED(bool xst);
 void stateChange(void);
 
 void left_back (void);

@@ -12,50 +12,58 @@
 #include <Arduino.h>    // Must be included in submodule
 #include "Combo.h"
 #include "avoidance.h"
+#include "disttest.h"
 #include <Servo.h>      // servo library
 
 // create servo object to control servo
 Servo myservo;
+#define SERVERO_PIN 3   /* attach servo on pin 3 to servo object */
 
-#include "avoidance.h"
-
-#define OOR   999
-const int Echo = A4;
-const int Trig = A5;
+#define Echo  A4
+#define Trig  A5
+#define OIR   20  /* Object in range */
 const int angle[] = { 1, 90, 180 };
 int odistance[3] = { OOR, OOR, OOR };
 #define leftDistance    odistance[0]
 #define middleDistance  odistance[1]
 #define rightDistance   odistance[2]
-#define MEASURE_LEFT    0
-#define MEASURE_FRONT   1
-#define MEASURE_RIGHT   2
-int measuring_mode = MEASURE_FRONT;
+
+int measuring_pos = MEASURE_FRONT;
+
 enum {
   MEASURING,
   TURNING
 } main_mode = MEASURING;
 int turning_direction = 1;      // FORWARD: 1, REVERSE: -1
 unsigned long turn_timer;
+bool obj_detected = false;
 
 /**
  * Object avoidance mode setup
  */
 Op_Mode avoidance_setup() {
   if (op_mode != AVOIDANCE_MODE) {
-    myservo.attach(3);  // attach servo on pin 3 to servo object
+    myservo.attach(SERVERO_PIN);
     myservo.write(90);
     pinMode(Echo, INPUT);    
     pinMode(Trig, OUTPUT);
     main_mode = MEASURING;
-    measuring_mode = MEASURE_FRONT;
+    measuring_pos = MEASURE_FRONT;
     turning_direction = 1;
     odistance[0] = odistance[1] = odistance[2] = OOR;
   }
   return AVOIDANCE_MODE;
 }
 
-/** 
+/**
+ *  Set sensor angle to the next measuring position.
+ */
+void turn_sensor(void) {
+  myservo.write(angle[measuring_pos]);
+  main_mode = TURNING;
+}
+
+/**
  *  Ultrasonic distance measurement Sub function 
  *
  *  Algorithm for ultrasound distance measurement:
@@ -64,34 +72,47 @@ Op_Mode avoidance_setup() {
  *             = (ut*340/20000) cm
  * @return Centimeters rounded to the nearest integer.
  */
-int Distance_test() {
+int distance_test() {
   digitalWrite(Trig, LOW);   
   delayMicroseconds(2);
   digitalWrite(Trig, HIGH);
   delayMicroseconds(20);
   digitalWrite(Trig, LOW);   
-  unsigned long mtime = pulseIn(Echo, HIGH, 180);
+  unsigned long mtime = pulseIn(Echo, HIGH, 360);
   return (mtime > 0) ? (mtime*(340/20000)) : OOR;
 }
 
-void avoidance_loop() {
-  // Detect object(s) and mearure distances:
+/**
+ *  Function to detect object in 3 positions in front of the car.
+ */
+bool measuring_loop() {
   if (main_mode == MEASURING) {
-    odistance[measuring_mode] = Distance_test();
-    main_mode = TURNING;
-    timer_init(turn_timer);
-    measuring_mode += turning_direction;
-    if (measuring_mode > MEASURE_RIGHT || measuring_mode < MEASURE_LEFT) {
-      turning_direction = -turning_direction;
-      measuring_mode = MEASURE_FRONT;
+    if ((odistance[measuring_pos] = distance_test()) < OIR) {
+      return true;
     }
-    myservo.write(angle[measuring_mode]);
+    timer_init(turn_timer);
+    measuring_pos += turning_direction;
+    if (measuring_pos > MEASURE_RIGHT || measuring_pos < MEASURE_LEFT) {
+      turning_direction = -turning_direction;
+      measuring_pos = MEASURE_FRONT;
+    }
+    turn_sensor();
   } else if (timer_exceeds(turn_timer, 1000)) {
     main_mode = MEASURING;
+    return false;
   }
+}
+
+/**
+ *  Detecting object in 3 frontal positions, and avoid hitting the object if one
+ *  is detected.
+ */
+void avoidance_loop() {
+  // Detect object(s) and mearure distances:
+  obj_detected = measuring_loop();
 
   // Avoide object(s) if anything is detected:
-  if (middleDistance > 20 && rightDistance > 20 && leftDistance > 20) {
+  if (!obj_detected) {
     go_forward();
   } else {
     stateChange();

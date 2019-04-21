@@ -9,6 +9,7 @@
 
 #include "Combo.h"
 #include "avoidance.h"
+#include "disttest.h"
 #include "testing.h"
 
 //  Logic control output pins
@@ -188,9 +189,15 @@ Op_Mode op_mode = IR_MODE;
 //  Infrared Blink
 bool state = LOW;           //define default input mode
 
+/**
+ *  Set LED to specified state.
+ */
+void set_LED(bool xst) {
+  digitalWrite(LED, state = xst);
+}
+
 void stateChange() {
-  state = !state;          
-  digitalWrite(LED, state);
+  set_LED(!state);          
   Serial.print("LED state changed to ");
   Serial.println(state);
 }
@@ -256,6 +263,7 @@ bool op_mode_change (IR_Code ircode) {
     case IR_3:    op_mode = avoidance_setup(); break;
     case IR_4:    op_mode = TRACKING_MODE; break;    
     case IR_5:    op_mode = TESTING_MODE; break;
+    case IR_6:    op_mode = DISTTEST_MODE; break;
   }
   if (op_mode == previous_mode) { return false; }
   stateChange();
@@ -282,5 +290,6 @@ void loop() {
     case AVOIDANCE_MODE:  avoidance_loop(); break;
     case TRACKING_MODE:   tracking_loop(); break;
     case TESTING_MODE:    testing_loop(ircode); break;
+    case DISTTEST_MODE:   disttest_loop(ircode); break;
   }
 }
