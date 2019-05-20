@@ -6,6 +6,8 @@
 #ifndef _COMBO_H_
 #define _COMBO_H_ 1
 
+#include <Arduino.h>    // Must be included in submodule
+
 /**
  *      Full IR keypad code table (See README:Reference):
  */
@@ -66,5 +68,8 @@ void go_reverse(void);
 void go_forward(void);
 void turn_left(void);
 void turn_right(void);
+
+void stop_setup(void);
+void stop_loop(void);
 
 #endif

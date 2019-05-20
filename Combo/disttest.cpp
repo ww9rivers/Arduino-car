@@ -1,7 +1,6 @@
 /**
  *	Distance detection test module.
  */
-#include <Arduino.h>    // Must be included in submodule
 #include "avoidance.h"
 #include "disttest.h"
 
@@ -14,12 +13,12 @@
  *	When an object is detected, the sensor stays in its position until the object is removed.
  */
 void disttest_loop (IR_Code ircode) {
-	turning_direction = 0;
 	set_LED(measuring_loop() ? HIGH : LOW);
 	switch(ircode) {
-	case IR_LEFT:	measuring_pos = MEASURE_LEFT; break;
-	case IR_UP:	measuring_pos = MEASURE_FRONT; break;
-	case IR_RIGHT:	measuring_pos = MEASURE_RIGHT; break;
+	case IR_LEFT:	measuring_pos = MEASURE_LEFT; turning_direction = 0; break;
+	case IR_UP:	measuring_pos = MEASURE_FRONT; turning_direction = 0; break;
+	case IR_RIGHT:	measuring_pos = MEASURE_RIGHT; turning_direction = 0; break;
+	case IR_DOWN:	turning_direction = 1; set_LED(HIGH); break;
 	}
 	turn_sensor();
 }

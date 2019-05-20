@@ -257,7 +257,7 @@ void tracking_loop() {
 bool op_mode_change (IR_Code ircode) {
   int previous_mode = op_mode;
   switch (ircode) {
-    case IR_0:    op_mode = STOP_MODE; break;
+    case IR_0:    op_mode = STOP_MODE; stop_setup(); break;
     case IR_1:    op_mode = AUTO_MODE; break;
     case IR_2:    op_mode = IR_MODE; break;
     case IR_3:    op_mode = avoidance_setup(); break;
@@ -284,7 +284,7 @@ void loop() {
     return;
   }
   switch (op_mode) {
-    case STOP_MODE:       stop_car(); break;
+    case STOP_MODE:       stop_loop(); break;
     case AUTO_MODE:       auto_run_loop(); break;
     case IR_MODE:         ir_control_loop(ircode); break;
     case AVOIDANCE_MODE:  avoidance_loop(); break;
