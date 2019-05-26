@@ -14,4 +14,7 @@ In the class, students learn to put these functions together into a
 the car's op mode.
 
 ## Reference
+
+* [Building the Elegoo Smart Robot Car Part 1 – Assemble an Arduino-Based Robot Car](https://dronebotworkshop.com/building-the-elegoo-smart-robot-car-part-1/)
+* [Elegoo Smart Robot Car Part 2 – Bluetooth and IR Remote Control](https://dronebotworkshop.com/elegoo-smart-robot-car-part-2/)
 * [Arduino Xinda / Keyes Infrared Remote Tutorial](http://henrysbench.capnfatz.com/henrys-bench/arduino-sensors-and-input/arduino-xinda-keyes-infrared-remote-tutorial/)
