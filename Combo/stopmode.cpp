@@ -8,6 +8,7 @@ unsigned long stop_timer;
 
 void stop_setup() {
 	stop_car();
+  Serial.println("Stopped!");
 	timer_init(stop_timer);
 }
 void stop_loop() {

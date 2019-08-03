@@ -58,6 +58,7 @@ Op_Mode avoidance_setup() {
     measuring_pos = MEASURE_FRONT;
     turn_sensor();
     last_dist = -1;
+    set_car_speed(DRIVE_SPEED);
   }
   return AVOIDANCE_MODE;
 }

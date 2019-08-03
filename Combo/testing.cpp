@@ -1,8 +1,10 @@
 #include "testing.h"
+#include "tracking.h"
 
 // Individual function testing
 enum {
-  TEST_LEFT, TEST_RIGHT
+  TEST_LEFT, TEST_RIGHT,
+  TEST_LT, TEST_MT, TEST_RT
 } test_mode = TEST_LEFT;
 
 void testing_loop (IR_Code ircode) {
@@ -21,6 +23,9 @@ void testing_loop (IR_Code ircode) {
         case IR_LEFT:   right_stop(); test_mode = TEST_LEFT; return;
       }
       break;
+  }
+  switch (ircode) {
+    case IR_STAR: test_tracking(); break;
   }
   start_car();
 }
