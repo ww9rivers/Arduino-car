@@ -1,5 +1,9 @@
 # Combo
 
+This program combines all interesting operation modes that the Elegoo Arduino Car can do.
+In the mean time, it tries to introduce a non-preemptive way for multi-tasking using
+Arduino.
+
 ## InfraRed Control
 
 This program uses these keys on the IR remote controller pad to change between operation modes:
