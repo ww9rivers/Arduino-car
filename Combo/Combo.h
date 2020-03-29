@@ -30,6 +30,11 @@
 #define PIN_LT_M  4
 #define PIN_LT_R  10
 
+//  I/O pins for servo & ultrasonic sensor for object detection
+#define SERVERO_PIN 3   /* attach servo on pin 3 to servo object */
+#define Echo  A4
+#define Trig  A5
+
 /**
  *  Car Speed settings: Between 0 and 255
  */

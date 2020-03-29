@@ -17,10 +17,7 @@
 
 // create servo object to control servo
 Servo myservo;
-#define SERVERO_PIN 3   /* attach servo on pin 3 to servo object */
 
-#define Echo  A4
-#define Trig  A5
 #define OIR   50    /* Object in range */
 const int angle[] = { 180, 90, 0 };
 const char * angletext[] = { "left", "front", "right" };
