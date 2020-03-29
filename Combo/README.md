@@ -31,3 +31,5 @@ bool op_mode_change (IR_Code ircode) {
   return true;
 }
 ```
+Mode change should happen when an IR remote key listed above in the code is pressed for now. Later this may change, but all modes
+should exit and switch to ```STOP_MODE``` when the key ```0``` is pressed.
