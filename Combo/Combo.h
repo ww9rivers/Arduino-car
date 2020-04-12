@@ -9,6 +9,35 @@
 #include <Arduino.h>    // Must be included in submodule
 
 /**
+ *    Name the GPIO pins used in the car
+ */
+
+//  Logic control output pins
+#define IN1 7         // Left  wheel forward
+#define IN2 8         // Left  wheel reverse
+#define IN3 9         // Right wheel reverse
+#define IN4 11        // Right wheel forward
+
+//  Channel enable output pins
+#define ENA 5         // Left  wheel speed
+#define ENB 6         // Right wheel speed
+//  IR input and LED pins
+#define RECV_PIN  12  // Infrared signal receiving pin
+#define LED       13  // LED pin
+
+//  Line tracking sensor pins
+#define PIN_LT_L  2
+#define PIN_LT_M  4
+#define PIN_LT_R  10
+
+/**
+ *  Car Speed settings: Between 0 and 255
+ */
+#define DRIVE_SPEED     200
+#define TRACKING_SPEED  150
+void set_car_speed (int speed);
+
+/**
  *      Full IR keypad code table (See README:Reference):
  */
 typedef enum {

@@ -11,12 +11,7 @@
 #include "avoidance.h"
 #include "disttest.h"
 #include "testing.h"
-
-//  Logic control output pins
-#define IN1 7         // Left  wheel forward
-#define IN2 8         // Left  wheel reverse
-#define IN3 9         // Right wheel reverse
-#define IN4 11        // Right wheel forward
+#include "tracking.h"
 
 ////////// IR REMOTE CODES //////////
 #define UNKNOWN_F 0x00511dbb  // FORWARD  5316027
@@ -25,28 +20,8 @@
 #define UNKNOWN_R 0x20fe4dbb  // RIGHT    553536955
 #define UNKNOWN_S 0xd7e84b1b  // STOP     3622325019
 
-/**
- *    Name the GPIO pins used in the car
- */
-
-//  Logic control output pins
-#define IN1 7         // Left  wheel forward
-#define IN2 8         // Left  wheel reverse
-#define IN3 9         // Right wheel reverse
-#define IN4 11        // Right wheel forward
-
-//  Channel enable output pins
-#define ENA 5         // Left  wheel speed
-#define ENB 6         // Right wheel speed
-//  IR input and LED pins
-#define RECV_PIN  12  // Infrared signal receiving pin
-#define LED       13  // LED pin
-//  Line tracking input pins
-#define IN_LT_L   2
-#define IN_LT_M   4
-#define IN_LT_R   10
-
-#define carSpeed 200  // initial speed of car >=0 to <=255
+int carSpeed;         // initial speed of car >=0 to <=255
+void set_car_speed (int speed) { carSpeed = speed; analogWrite(ENA, speed); analogWrite(ENB, speed); }
 
 //    The direction of the car's movement
 //  ENA   ENB   IN1   IN2   IN3   IN4   Description  
@@ -63,10 +38,9 @@ void left_stop ()  { digitalWrite(IN1, LOW);  digitalWrite(IN2, LOW); }
 void right_back () { digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW); }
 void right_fore () { digitalWrite(IN3, LOW);  digitalWrite(IN4, HIGH); }
 void right_stop () { digitalWrite(IN3, LOW);  digitalWrite(IN4, LOW); }
-void set_car_speed ()  { analogWrite(ENA, carSpeed); analogWrite(ENB, carSpeed); }
 // enable L298n A+B channels
 void start_car () { digitalWrite(ENA, HIGH); digitalWrite(ENB,HIGH); }
-void stop_car () {  digitalWrite(ENA, LOW);  digitalWrite(ENB, LOW);  Serial.println("Stop!"); } 
+void stop_car () {  digitalWrite(ENA, LOW);  digitalWrite(ENB, LOW); } 
 
 IRrecv irrecv(RECV_PIN);    // initialization
 decode_results results;     // Define structure type
@@ -117,6 +91,7 @@ void auto_run_setup() {
   pinMode(IN4,OUTPUT);
   pinMode(ENA,OUTPUT);
   pinMode(ENB,OUTPUT);
+  set_car_speed(DRIVE_SPEED);
 }
 
 /**
@@ -127,19 +102,6 @@ void ir_blink_setup() {
   irrecv.enableIRIn();  // Start receiving
 }
 
-/**
- *  Line Tracking IO define
- */
-#define LT_R !digitalRead(10)
-#define LT_M !digitalRead(4)
-#define LT_L !digitalRead(2)
-
-void tracking_setup(){
-  pinMode(LT_R,INPUT);
-  pinMode(LT_M,INPUT);
-  pinMode(LT_L,INPUT);
-}
-
 void setup() {
   stop_car();
   Serial.begin(9600);   // debug output at 9600 baud
@@ -147,7 +109,6 @@ void setup() {
   avoidance_setup();
   ir_blink_setup();
   tracking_setup();
-  set_car_speed();
   irrecv.enableIRIn();  
 }
 
@@ -210,8 +171,12 @@ IR_Code ir_control_code() {
 
   timer_init(preMillis);
   IR_Code val = (IR_Code)results.value;
-  Serial.println(val);
   irrecv.resume();
+  if (val <= IR_NONE) {
+    return IR_NONE;
+  }
+  Serial.print("IR code = ");
+  Serial.println(val);
   return val;
 }
 
@@ -233,41 +198,36 @@ void ir_control_loop(IR_Code val) {
   }
 }
 
-// Line tracking
-
-void tracking_loop() {
-  if(LT_M){
-    go_forward();
-  }
-  else if(LT_R) {
-    turn_right();
-    while(LT_R);
-  }
-  else if(LT_L) {
-    turn_left();
-    while(LT_L);
-  }
-}
-
 /** Check for mode change
  *
  * @param   ircode  Code received from the IR control.
  * @Returns: TRUE if op_mode is changed; FALSE if unchanged.
  */
 bool op_mode_change (IR_Code ircode) {
+  const char * mode_text[] = {
+    "STOP_MODE",
+    "AUTO_MODE",
+    "IR_MODE",
+    "AVOIDANCE_MODE",
+    "TRACKING_MODE",
+    "TESTING_MODE",
+    "DISTTEST_MODE"
+  };
   int previous_mode = op_mode;
   switch (ircode) {
     case IR_0:    op_mode = STOP_MODE; stop_setup(); break;
-    case IR_1:    op_mode = AUTO_MODE; break;
-    case IR_2:    op_mode = IR_MODE; break;
+    case IR_1:    op_mode = AUTO_MODE; auto_run_setup(); break;
+    case IR_2:    op_mode = IR_MODE; ir_blink_setup(); break;
     case IR_3:    op_mode = avoidance_setup(); break;
-    case IR_4:    op_mode = TRACKING_MODE; break;    
+    case IR_4:    op_mode = TRACKING_MODE; tracking_setup(); break;
     case IR_5:    op_mode = TESTING_MODE; break;
     case IR_6:    op_mode = DISTTEST_MODE; break;
     default:
       return false;
   }
+
   if (op_mode == previous_mode) { return false; }
+  Serial.println(mode_text[op_mode]);
   stateChange();
   return true;
 }

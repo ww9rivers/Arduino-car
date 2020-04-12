@@ -245,43 +245,74 @@ void avoidance_loop() {
   delay(500);
   middleDistance = Distance_test();
 
-  if( avoidance_loop ) {
-    if (middleDistance <= 50) {
-      stop_car();
-      }
-    delay(100);
+// all delays divided by 2
+  if(middleDistance <= 100) {
+    stop_car ();
+    delay(500);
+    
+    
     myservo.write(10);
-    delay(200);
+    delay(500);
     rightDistance = Distance_test();
 
     
-    myservo.write(90);
-    delay(200);
+    myservo.write(270);
+    delay(500);
     leftDistance = Distance_test();
 
-    delay(100);
+    delay(250);
     myservo.write(180);
-    delay(200);
+    delay(500);
     if(rightDistance > leftDistance) {
       right();
-      delay(72);
+      delay(180);
       forward();
     }
     else if(rightDistance < leftDistance) {
       left();
-      delay(72);
+      delay(180);
       forward();
     }
     else if((rightDistance <= 10) || (leftDistance <= 10)) {
       back();
-      delay(36);
+      delay(90);
     }
     else {
       forward();
     }
   }
   else {
-    forward();
+    // changed from simply running forward to
+    // scanning without stop
+    myservo.write(10);
+    delay(500);
+    rightDistance = Distance_test();
+
+    
+    myservo.write(270);
+    delay(500);
+    leftDistance = Distance_test();
+
+    delay(250);
+    myservo.write(90);
+    delay(500);
+    if(rightDistance > leftDistance) {
+      right();
+      delay(180);
+      forward();
+    }
+    else if(rightDistance < leftDistance) {
+      left();
+      delay(180);
+      forward();
+    }
+    else if((rightDistance <= 10) || (leftDistance <= 10)) {
+      back();
+      delay(90);
+    }
+    else {
+      forward();
+    }
   }
 }
 
