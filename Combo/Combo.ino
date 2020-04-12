@@ -264,6 +264,8 @@ bool op_mode_change (IR_Code ircode) {
     case IR_4:    op_mode = TRACKING_MODE; break;    
     case IR_5:    op_mode = TESTING_MODE; break;
     case IR_6:    op_mode = DISTTEST_MODE; break;
+    default:
+      return false;
   }
   if (op_mode == previous_mode) { return false; }
   stateChange();
