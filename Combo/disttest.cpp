@@ -19,6 +19,8 @@ void disttest_loop (IR_Code ircode) {
 	case IR_UP:	measuring_pos = MEASURE_FRONT; turning_direction = 0; break;
 	case IR_RIGHT:	measuring_pos = MEASURE_RIGHT; turning_direction = 0; break;
 	case IR_DOWN:	turning_direction = 1; set_LED(HIGH); break;
+  default:
+    return;
 	}
 	turn_sensor();
 }
