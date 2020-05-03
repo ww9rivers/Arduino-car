@@ -39,7 +39,7 @@
  *  Car Speed settings: Between 0 and 255
  */
 #define DRIVE_SPEED     200
-#define TRACKING_SPEED  150
+#define TRACKING_SPEED  200
 void set_car_speed (int speed);
 
 /**
@@ -74,7 +74,8 @@ typedef enum {
   AVOIDANCE_MODE,
   TRACKING_MODE,
   TESTING_MODE,
-  DISTTEST_MODE
+  DISTTEST_MODE,
+  CHALLENGE1_MODE
 } Op_Mode;
 extern Op_Mode op_mode;
 
@@ -86,6 +87,8 @@ extern Op_Mode op_mode;
 
 void set_LED(bool xst);
 void stateChange(void);
+#define LED_off() set_LED(LOW)
+#define LED_on()  set_LED(HIGH)
 
 void left_back (void);
 void left_fore (void);

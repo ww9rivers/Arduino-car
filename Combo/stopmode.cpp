@@ -10,6 +10,7 @@ void stop_setup() {
 	stop_car();
   Serial.println("Stopped!");
 	timer_init(stop_timer);
+  op_mode = STOP_MODE;
 }
 void stop_loop() {
 	if (timer_exceeds(stop_timer, 1000)) {

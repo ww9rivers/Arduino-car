@@ -9,8 +9,9 @@
  */
 #include "Combo.h"
 
-//	Out of range
-#define OOR   999
+#define OIR   50    /* Object in range */
+#define ONR   20    /* Object near range */
+#define OOR   999   /* Out of range */
 
 #define MEASURE_LEFT    0
 #define MEASURE_FRONT   1
@@ -18,7 +19,7 @@
 extern int measuring_pos;
 extern int turning_direction;
 
-Op_Mode avoidance_setup(void);
+void avoidance_setup(void);
 void avoidance_loop(void);
 int distance_test(void);
 bool measuring_loop(void);

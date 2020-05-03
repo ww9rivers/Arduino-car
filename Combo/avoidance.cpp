@@ -18,16 +18,15 @@
 // create servo object to control servo
 Servo myservo;
 
-#define OIR   50    /* Object in range */
 const int angle[] = { 180, 90, 0 };
 const char * angletext[] = { "left", "front", "right" };
 int odistance[3] = { OOR, OOR, OOR };
 #define leftDistance    odistance[0]
 #define middleDistance  odistance[1]
 #define rightDistance   odistance[2]
+#define last_dist       odistance[measuring_pos]
 
 static int old_pos = -1;
-static int last_dist = -1;
 int measuring_pos = MEASURE_FRONT;
 
 enum {
@@ -43,7 +42,7 @@ unsigned long debug_timer = 0;
 /**
  * Object avoidance mode setup
  */
-Op_Mode avoidance_setup() {
+void avoidance_setup() {
   if (op_mode != AVOIDANCE_MODE) {
     Serial.println("Entering AVOIDANCE_MODE...");
     myservo.attach(SERVERO_PIN);
@@ -54,10 +53,9 @@ Op_Mode avoidance_setup() {
     old_pos = -1;
     measuring_pos = MEASURE_FRONT;
     turn_sensor();
-    last_dist = -1;
-    set_car_speed(DRIVE_SPEED);
+    set_car_speed(TRACKING_SPEED);
+    op_mode = AVOIDANCE_MODE;
   }
-  return AVOIDANCE_MODE;
 }
 
 /**
@@ -93,15 +91,10 @@ int distance_test() {
   digitalWrite(Trig, LOW);
   unsigned long mtime = pulseIn(Echo, HIGH);
   int dist = (mtime > 0) ? floor(mtime/(20000/340)) : OOR;
-  if (timer_exceeds(debug_timer, 1000)) {
-    Serial.print("distance_test: mtime = ");
-    Serial.print(mtime);
-    Serial.print(", distance = ");
-    Serial.println(dist);
-    timer_init(debug_timer);
-  }
-  if (dist != last_dist) {
-    Serial.print("Last distance = "); Serial.print(last_dist);
+  int diff = dist-last_dist;
+  if ((dist < OIR || last_dist < OIR) && (diff < -10 || diff > 10)) {
+    Serial.print("Measured "); Serial.print(measuring_pos);
+    Serial.print(", Last distance = "); Serial.print(last_dist);
     Serial.print(", Detected = "); Serial.print(dist);
     Serial.print(", mtime = "); Serial.println(mtime);
     last_dist = dist;
@@ -116,7 +109,7 @@ int distance_test() {
  */
 bool measuring_loop() {
   if (main_mode == MEASURING) {
-    if ((odistance[measuring_pos] = distance_test()) < OIR) {
+    if (distance_test() < OIR) {
       return true;
     }
     measuring_pos += turning_direction;
