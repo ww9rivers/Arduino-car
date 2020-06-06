@@ -20,7 +20,7 @@ Servo myservo;
 
 const int angle[] = { 180, 90, 0 };
 const char * angletext[] = { "left", "front", "right" };
-int odistance[3] = { OOR, OOR, OOR };
+int odistance[3];
 #define leftDistance    odistance[0]
 #define middleDistance  odistance[1]
 #define rightDistance   odistance[2]
@@ -35,8 +35,6 @@ enum {
 } main_mode = MEASURING;
 int turning_direction = 1;      // FORWARD: 1, REVERSE: -1
 unsigned long turn_timer;
-bool obj_detected = false;
-
 unsigned long debug_timer = 0;
 
 /**
@@ -49,17 +47,30 @@ void avoidance_setup() {
     pinMode(Echo, INPUT);    
     pinMode(Trig, OUTPUT);
     turning_direction = 1;
-    odistance[0] = odistance[1] = odistance[2] = OOR;
+    odistance[0] = odistance[1] = odistance[2] = OUT_OF_RANGE;
     old_pos = -1;
     measuring_pos = MEASURE_FRONT;
     turn_sensor();
     set_car_speed(TRACKING_SPEED);
-    op_mode = AVOIDANCE_MODE;
   }
 }
 
 /**
- *  Set sensor angle to the next measuring position.
+ *  Set fixed sensor direction and start turning the sensor to it.
+ *  The turning_direction is set to 0 (neutral) 
+ */
+void set_sensor (int sdir) {
+  if (measuring_pos != sdir) {
+    measuring_pos = sdir;
+    turn_sensor();
+  }
+  turning_direction = 0;
+}
+
+/**
+ *  Set sensor angle to the next measuring position. Initialize turn_timer
+ *  to measure / gauge if the sensor is in position, ready to detect object
+ *  in the measuring direction.
  */
 void turn_sensor(void) {
   if (old_pos != measuring_pos) {
@@ -90,9 +101,9 @@ int distance_test() {
   delayMicroseconds(20);
   digitalWrite(Trig, LOW);
   unsigned long mtime = pulseIn(Echo, HIGH);
-  int dist = (mtime > 0) ? floor(mtime/(20000/340)) : OOR;
+  int dist = (mtime > 0) ? floor(mtime/(20000/340)) : OUT_OF_RANGE;
   int diff = dist-last_dist;
-  if ((dist < OIR || last_dist < OIR) && (diff < -10 || diff > 10)) {
+  if ((object_in_range(dist) || object_in_range(last_dist)) && (diff < -10 || diff > 10)) {
     Serial.print("Measured "); Serial.print(measuring_pos);
     Serial.print(", Last distance = "); Serial.print(last_dist);
     Serial.print(", Detected = "); Serial.print(dist);
@@ -107,22 +118,24 @@ int distance_test() {
  *
  * @returns true, if an object is detected; false if not.
  */
-bool measuring_loop() {
+int distance_scan() {
   if (main_mode == MEASURING) {
-    if (distance_test() < OIR) {
-      return true;
+    int dist = distance_test();
+    if (object_outof_range(dist)) {
+      measuring_pos += turning_direction;
+      if (measuring_pos > MEASURE_RIGHT || measuring_pos < MEASURE_LEFT) {
+        turning_direction = -turning_direction;
+        measuring_pos = MEASURE_FRONT;
+      }
+      turn_sensor();
     }
-    measuring_pos += turning_direction;
-    if (measuring_pos > MEASURE_RIGHT || measuring_pos < MEASURE_LEFT) {
-      turning_direction = -turning_direction;
-      measuring_pos = MEASURE_FRONT;
-    }
-    turn_sensor();
+    return dist;
   } else if (timer_exceeds(turn_timer, 1000)) {
     Serial.println("measuring_loop: Turning => Detecting");
     main_mode = MEASURING;
+    return distance_test();
   }
-  return false;
+  return SENSOR_TURNING;
 }
 
 /**
@@ -131,16 +144,16 @@ bool measuring_loop() {
  */
 void avoidance_loop() {
   // Detect object(s) and mearure distances:
-  obj_detected = measuring_loop();
+  int dist = distance_scan();
 
   // Avoide object(s) if anything is detected:
-  if (!obj_detected) {
+  if (!object_near(dist)) {
     go_forward();
   } else {
     stateChange();
-    if ((leftDistance < OIR && rightDistance > leftDistance) || rightDistance > middleDistance) {
+    if ((object_in_range(leftDistance) && rightDistance > leftDistance) || rightDistance > middleDistance) {
       turn_right();
-    } else if ((rightDistance < OIR && rightDistance < leftDistance) || leftDistance > middleDistance) {
+    } else if ((object_in_range(rightDistance) && rightDistance < leftDistance) || leftDistance > middleDistance) {
       turn_left();
     } else {
       go_reverse();

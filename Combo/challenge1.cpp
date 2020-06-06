@@ -1,3 +1,9 @@
+/**
+ * Implementation of project 1 (Challenge 1): Drive car on track;
+ * Stop car if object is detected; Restart when object is removed.
+ */
+
+#include "challenge1.h"
 #include "avoidance.h"
 #include "tracking.h"
 
@@ -5,8 +11,8 @@ enum {
   OT_DETECT,
   OT_WAIT,
   OT_NOP
-} ot_mode;
-bool line_tracking;
+};
+int ot_mode;
 
 void detect_object (void);
 
@@ -17,15 +23,13 @@ void detect_object (void);
 void challenge1_setup () {
   avoidance_setup();
   tracking_setup();
-  op_mode = CHALLENGE1_MODE;
   ot_mode = OT_NOP;
-  line_tracking = true;
   LED_off();
 }
 
 /**
- * Loop function for Challenge 1: Trace around object if one
- * is detected; Otherwise, track line.
+ * Loop function for Challenge 1: Stop and wait if object
+ * is detected; Restart when the object is removed.
  */
 void challenge1_loop (IR_Code ircode) {
   switch (ircode) {
@@ -34,26 +38,24 @@ void challenge1_loop (IR_Code ircode) {
     default: break;
   }
   detect_object();
-  if (line_tracking) {
-    tracking_loop();
-  }
+  tracking_loop();
 }
 
 void detect_object () {
   switch (ot_mode) {
     case OT_DETECT:
-      if (distance_test() < ONR) {
+      if (object_near(distance_test())) {
         stop_car();
         LED_on();
-        line_tracking = false;
+        line_tracking_off();
         ot_mode = OT_WAIT;
       }
       return;
     case OT_WAIT:
-      if (distance_test() >= ONR) {
+      if (object_near(distance_test())) {
         start_car();
         LED_off();
-        line_tracking = true;
+        line_tracking_on();
         ot_mode = OT_DETECT;
       }
     default:

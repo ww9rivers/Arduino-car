@@ -11,6 +11,9 @@
 #include "avoidance.h"
 #include "challenge1.h"
 #include "disttest.h"
+#include "project2.h"
+#include "project3.h"
+#include "project4.h"
 #include "testing.h"
 #include "tracking.h"
 
@@ -46,7 +49,7 @@ void stop_car () {  digitalWrite(ENA, 0);  digitalWrite(ENB, 0); }
 IRrecv irrecv(RECV_PIN);    // initialization
 decode_results results;     // Define structure type
 
-unsigned long val;
+unsigned long val;          // IR code
 unsigned long preMillis;
 
 /**
@@ -231,18 +234,25 @@ bool op_mode_change (IR_Code ircode) {
     "AVOIDANCE_MODE",
     "TRACKING_MODE",
     "TESTING_MODE",
-    "DISTTEST_MODE"
+    "DISTTEST_MODE",
+    "PROJECT1_MODE",
+    "PROJECT2_MODE",
+    "PROJECT3_MODE",
+    "PROJECT4_MODE"
   };
   int previous_mode = op_mode;
   switch (ircode) {
-    case IR_0:    stop_setup(); break;
-    case IR_1:    op_mode = AUTO_MODE; auto_run_setup(); break;
-    case IR_2:    op_mode = IR_MODE; ir_blink_setup(); break;
-    case IR_3:    avoidance_setup(); break;
-    case IR_4:    op_mode = TRACKING_MODE; tracking_setup(); break;
+    case IR_POUND:stop_setup(); break;
+    case IR_1:    auto_run_setup(); op_mode = AUTO_MODE; break;
+    case IR_2:    ir_blink_setup(); op_mode = IR_MODE; break;
+    case IR_3:    avoidance_setup(); op_mode = AVOIDANCE_MODE; break;
+    case IR_4:    tracking_setup(); op_mode = TRACKING_MODE; break;
     case IR_5:    op_mode = TESTING_MODE; break;
     case IR_6:    op_mode = DISTTEST_MODE; break;
-    case IR_7:    challenge1_setup(); break;
+    case IR_7:    challenge1_setup(); op_mode = PROJECT1_MODE; break;
+    case IR_8:    project2_setup(); op_mode = PROJECT2_MODE; break;
+    case IR_9:    project3_setup(); op_mode = PROJECT3_MODE; break;
+    case IR_0:    project4_setup(); op_mode = PROJECT4_MODE; break;
     default:
       return false;
   }
@@ -274,6 +284,9 @@ void loop() {
     case TRACKING_MODE:   tracking_loop(); break;
     case TESTING_MODE:    testing_loop(ircode); break;
     case DISTTEST_MODE:   disttest_loop(ircode); break;
-    case CHALLENGE1_MODE: challenge1_loop(ircode); break;
+    case PROJECT1_MODE:   challenge1_loop(ircode); break;
+    case PROJECT2_MODE:   project2_loop(); break;
+    case PROJECT3_MODE:   project3_loop(); break;
+    case PROJECT4_MODE:   project4_loop(); break;
   }
 }

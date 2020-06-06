@@ -9,9 +9,12 @@
  */
 #include "Combo.h"
 
-#define OIR   50    /* Object in range */
-#define ONR   20    /* Object near range */
-#define OOR   999   /* Out of range */
+#define OUT_OF_RANGE          999
+#define SENSOR_TURNING        1000
+#define object_in_range(x)    ((x)<50)
+#define object_near(x)        ((x)<20)
+#define object_outof_range(x) ((x)==OUT_OF_RANGE)
+#define sensor_not_ready(x)   ((x)==SENSOR_TURNING)
 
 #define MEASURE_LEFT    0
 #define MEASURE_FRONT   1
@@ -21,8 +24,9 @@ extern int turning_direction;
 
 void avoidance_setup(void);
 void avoidance_loop(void);
+int distance_scan(void);
 int distance_test(void);
-bool measuring_loop(void);
+void set_sensor(int sdir);
 void turn_sensor(void);
 
 #endif

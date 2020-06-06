@@ -7,6 +7,8 @@
 #define LT_M !digitalRead(PIN_LT_M)
 #define LT_L !digitalRead(PIN_LT_L)
 
+bool line_tracking;
+
 /** Line Tracking LED sensor testing
  *
  * The Elegoo Arduino car kit has a line tracking sensor with 3 sets of LEDs, each is able
@@ -35,18 +37,21 @@ void tracking_setup(){
   pinMode(PIN_LT_M,INPUT_PULLUP);
   pinMode(PIN_LT_L,INPUT);
   set_car_speed(TRACKING_SPEED);
+  line_tracking_on();
 }
 
 // Line tracking
 
 void tracking_loop() {
-  if(LT_M){
-    go_forward();
-  }
-  else if(LT_R) {
-    turn_right();
-  }
-  else if(LT_L) {
-    turn_left();
+  if (line_tracking) {
+    if(LT_M){
+      go_forward();
+    }
+    else if(LT_R) {
+      turn_right();
+    }
+    else if(LT_L) {
+      turn_left();
+    }
   }
 }

@@ -13,7 +13,7 @@
  *	When an object is detected, the sensor stays in its position until the object is removed.
  */
 void disttest_loop (IR_Code ircode) {
-	set_LED(measuring_loop() ? HIGH : LOW);
+	set_LED(object_in_range(distance_scan()) ? HIGH : LOW);
 	switch(ircode) {
 	case IR_LEFT:	measuring_pos = MEASURE_LEFT; turning_direction = 0; break;
 	case IR_UP:	measuring_pos = MEASURE_FRONT; turning_direction = 0; break;

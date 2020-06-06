@@ -75,7 +75,10 @@ typedef enum {
   TRACKING_MODE,
   TESTING_MODE,
   DISTTEST_MODE,
-  CHALLENGE1_MODE
+  PROJECT1_MODE,
+  PROJECT2_MODE,
+  PROJECT3_MODE,
+  PROJECT4_MODE
 } Op_Mode;
 extern Op_Mode op_mode;
 
@@ -83,7 +86,7 @@ extern Op_Mode op_mode;
  *  Timer -- Macros for timer operation
  */
 #define timer_init(x)       { x = millis(); }
-#define timer_exceeds(x, y) (millis()-x > y)
+#define timer_exceeds(x, y) (millis()-(x) > (y))
 
 void set_LED(bool xst);
 void stateChange(void);
