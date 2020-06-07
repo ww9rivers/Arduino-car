@@ -82,6 +82,8 @@ typedef enum {
 } Op_Mode;
 extern Op_Mode op_mode;
 
+extern short int debug_level;
+
 /**
  *  Timer -- Macros for timer operation
  */
@@ -99,7 +101,6 @@ void left_stop (void);
 void right_back (void);
 void right_fore (void);
 void right_stop (void);
-void set_car_speed (void);
 void start_car (void);
 void stop_car (void);
 

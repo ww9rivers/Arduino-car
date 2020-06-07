@@ -53,6 +53,19 @@ unsigned long val;          // IR code
 unsigned long preMillis;
 
 /**
+ * Debug level
+ */
+short int debug_level = 0;
+void change_debug_level (void) {
+  if (debug_level > 3) { debug_level = 0; }
+  else {
+    ++debug_level;
+    Serial.print("Debug level = ");
+    Serial.println(debug_level);
+  }
+}
+
+/**
  * BEGIN DEFINE FUNCTIONS
  */
 enum {
@@ -181,9 +194,11 @@ void set_LED(bool xst) {
 }
 
 void stateChange() {
-  set_LED(!state);          
-  Serial.print("LED state changed to ");
-  Serial.println(state);
+  set_LED(!state);
+  if (debug_level > 1) {
+    Serial.print("LED state changed to ");
+    Serial.println(state);
+  }
 }
 
 //  Infared Control reception
@@ -242,6 +257,7 @@ bool op_mode_change (IR_Code ircode) {
   };
   int previous_mode = op_mode;
   switch (ircode) {
+    case IR_STAR: change_debug_level(); break;
     case IR_POUND:stop_setup(); break;
     case IR_1:    auto_run_setup(); op_mode = AUTO_MODE; break;
     case IR_2:    ir_blink_setup(); op_mode = IR_MODE; break;

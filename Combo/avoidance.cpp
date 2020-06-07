@@ -86,6 +86,26 @@ void turn_sensor(void) {
 }
 
 /**
+ *  Run a given number of distance tests and average the results.
+ */
+int distance_average (int count) {
+  int cnt = 0;
+  int dist = 0;
+  int dist1;
+  while (count > 0) {
+    dist1 = distance_test();
+    if (sensor_not_ready(dist1)) {
+        return SENSOR_TURNING;
+    }
+    dist += dist1;
+    cnt++;
+    count--;
+  }
+  if (cnt == 0) { return SENSOR_TURNING; }
+  return int(dist/cnt);
+}
+
+/**
  *  Ultrasonic distance measurement Sub function 
  *
  *  Algorithm for ultrasound distance measurement:
@@ -104,10 +124,12 @@ int distance_test() {
   int dist = (mtime > 0) ? floor(mtime/(20000/340)) : OUT_OF_RANGE;
   int diff = dist-last_dist;
   if ((object_in_range(dist) || object_in_range(last_dist)) && (diff < -10 || diff > 10)) {
-    Serial.print("Measured "); Serial.print(measuring_pos);
-    Serial.print(", Last distance = "); Serial.print(last_dist);
-    Serial.print(", Detected = "); Serial.print(dist);
-    Serial.print(", mtime = "); Serial.println(mtime);
+    if (debug_level > 0) {
+      Serial.print("Measured "); Serial.print(measuring_pos);
+      Serial.print(", Last distance = "); Serial.print(last_dist);
+      Serial.print(", Detected = "); Serial.print(dist);
+      Serial.print(", mtime = "); Serial.println(mtime);
+    }
     last_dist = dist;
   }
   return dist;
@@ -130,7 +152,7 @@ int distance_scan() {
       turn_sensor();
     }
     return dist;
-  } else if (timer_exceeds(turn_timer, 1000)) {
+  } else if (timer_exceeds(turn_timer, 500)) {
     Serial.println("measuring_loop: Turning => Detecting");
     main_mode = MEASURING;
     return distance_test();

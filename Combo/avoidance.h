@@ -24,9 +24,12 @@ extern int turning_direction;
 
 void avoidance_setup(void);
 void avoidance_loop(void);
+int distance_average(int count);
 int distance_scan(void);
 int distance_test(void);
 void set_sensor(int sdir);
 void turn_sensor(void);
+
+#define distance_avg()  distance_average(3)
 
 #endif
